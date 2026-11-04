@@ -45,7 +45,7 @@ function gazeFor(e: Expression, seed: number): { x: number; y: number } {
   return { x: (seed % 2 ? 1 : -1) * 6, y: -6 };
 }
 
-export function poseAt(actor: Actor, t: number, duration: number, seed0: string, speaking: boolean): PoseResult {
+export function poseAt(actor: Actor, t: number, duration: number, seed0: string, speaking: boolean, mouthLevel?: number, voiced = false): PoseResult {
   const seed = hash(seed0);
   const tq = onTwos(t);
   const p = restPose(actor.expression);
@@ -58,24 +58,18 @@ export function poseAt(actor: Actor, t: number, duration: number, seed0: string,
   switch (actor.action) {
     case 'stand':
       break;
-    case 'walk': {
-      const to = actor.to ?? (actor.x < 0.5 ? 0.7 : 0.3);
-      const travel = clamp(tq / Math.max(0.5, duration - 0.6), 0, 1);
+    case 'walk':
+    case 'run': {
+      const run = actor.action === 'run';
+      const to = actor.to ?? (actor.x < 0.5 ? 0.8 : 0.2);
+      const travelTime = Math.max(0.5, (run ? 0.75 : 1) * (duration - 0.6));
+      const travel = clamp(tq / travelTime, 0, 1);
       x = actor.x + (to - actor.x) * travel;
-      const moving = travel < 1;
-      if (moving) {
-        const cyc = Math.floor((t * 24) / 4) % 4; // four drawings, 4 frames each
-        const side = to > actor.x ? 1 : -1;
-        p.dy = cyc % 2 ? -0.014 * 1000 : 0;
-        const a = cyc === 0 ? 1 : cyc === 2 ? -1 : 0;
-        p.feet = [a * 30 * side, -a * 30 * side, cyc === 1 ? 14 : 0, cyc === 3 ? 14 : 0];
-        p.legL = [0.04 + a * 0.22, a < 0 ? 0.25 : 0];
-        p.legR = [0.04 - a * 0.22, a > 0 ? 0.25 : 0];
-        p.armL = [0.12 - a * 0.25, 0.1];
-        p.armR = [0.12 + a * 0.25, 0.1];
-        p.hem = a * 0.6;
-        p.lean = side * 0.03;
-        p.gaze = { x: side * 10, y: 0 };
+      if (travel < 1) {
+        const drawings = run ? 6 : 8;
+        const phase = (Math.floor((t * 24) / 2) % drawings) / drawings;
+        p.side = { facing: to >= actor.x ? 1 : -1, phase, run };
+        if (run && actor.expression === 'calm') p.expression = 'set';
       }
       break;
     }
@@ -176,7 +170,12 @@ export function poseAt(actor: Actor, t: number, duration: number, seed0: string,
       return powerPose(actor, t, x);
   }
 
-  if (speaking) {
+  if (speaking && mouthLevel !== undefined) {
+    p.mouth = mouthLevel;
+    p.mouthOpen = false;
+    if (p.expression === 'happy') p.expression = 'look';
+    if (!p.side) p.gaze = { x: 0, y: 0 };
+  } else if (speaking && !voiced) {
     // mouth flaps on twos with a pause every few drawings
     const step = Math.floor((t * 24) / 3);
     p.mouthOpen = step % 2 === 0 && step % 7 !== 6;

@@ -504,3 +504,34 @@ a.button:hover { border-color: var(--rule); }
 .group summary { font-weight: 700; cursor: pointer; padding: 4px 0; }
 .music-box { display: grid; gap: 4px; }
 .music-box .upload { margin-top: 0; flex: 1; }
+
+/* ── Motion Lab ── */
+.lab { flex: 1; display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 24px; padding: 20px 16px; max-width: 1280px; width: 100%; margin: 0 auto; }
+.lab-nav { position: sticky; top: 80px; align-self: start; }
+.lab-nav ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.lab-nav button { width: 100%; text-align: start; display: flex; gap: 10px; align-items: center; padding: 8px 10px; border-color: transparent; background: transparent; }
+.lab-nav button.active { background: var(--ink); color: var(--on-ink); font-weight: 700; }
+.lab-nav .n { width: 24px; height: 24px; display: inline-grid; place-items: center; border: 1.5px solid currentColor; border-radius: 2px; font-size: 0.8rem; flex: none; }
+.lesson h1 { font-size: 1.6rem; margin: 4px 0 8px; }
+.lesson .idea { font-size: 1.12rem; font-weight: 700; border-inline-start: 4px solid var(--brand); padding: 6px 12px; background: var(--brand-soft); }
+.lesson > p { max-width: 70ch; }
+.notes { padding-inline-start: 18px; }
+.notes li { margin: 6px 0; }
+.lesson-nav { display: flex; justify-content: space-between; margin-top: 28px; border-top: 2px solid var(--rule); padding-top: 14px; }
+.demo { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; margin: 14px 0; background: var(--panel); }
+.demo-stages { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+.demo-stage { margin: 0; display: grid; gap: 4px; justify-items: center; }
+.demo-stage canvas { max-width: 100%; height: auto; border: 1px solid var(--border); border-radius: 2px; background: #fff; }
+.demo-stage figcaption { font-size: 0.88rem; text-align: center; }
+.strip { display: flex; gap: 1px; direction: ltr; max-width: 100%; }
+.strip i { width: 5px; height: 10px; background: var(--panel-2); border: 1px solid var(--border); display: block; }
+.strip i.new { background: var(--ink); }
+.strip i.now { outline: 2px solid var(--brand); outline-offset: 1px; }
+.demo-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; margin-top: 10px; }
+.demo-controls .check { margin: 0; }
+a.primary-link { background: var(--ink); color: var(--on-ink); border-color: var(--ink); font-weight: 700; }
+@media (max-width: 860px) {
+  .lab { grid-template-columns: minmax(0, 1fr); }
+  .lab-nav { position: static; }
+  .lab-nav ol { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

@@ -21,6 +21,7 @@ import {
 } from '../../domain/types';
 import { DEFAULT_COLORS, newCharacter } from '../../domain/sanitize';
 import { FONTS } from '../../design/fonts';
+import { VoiceLine } from './VoiceLine';
 
 interface Props {
   project: Project;
@@ -113,7 +114,7 @@ export function Inspector({ project, index, onShot, onProject, onMove, onDuplica
                 onChange={(e) => {
                   const action = e.target.value as Shot['actors'][number]['action'];
                   const min = ACTIONS.find((x) => x.id === action)?.minSeconds ?? 0;
-                  const actors = shot.actors.map((x, k) => (k === i ? { ...x, action, to: action === 'walk' ? (a.x < 0.5 ? 0.75 : 0.25) : undefined } : x));
+                  const actors = shot.actors.map((x, k) => (k === i ? { ...x, action, to: action === 'walk' || action === 'run' ? (a.x < 0.5 ? 0.8 : 0.2) : undefined } : x));
                   onShot({ actors, duration: Math.max(shot.duration, min) });
                 }}
                 aria-label="الحركة"
@@ -138,7 +139,7 @@ export function Inspector({ project, index, onShot, onProject, onMove, onDuplica
               </span>
               <input type="range" min={0.05} max={0.95} step={0.01} value={a.x} onChange={(e) => setActor(i, { x: Number(e.target.value) })} />
             </label>
-            {a.action === 'walk' && (
+            {(a.action === 'walk' || a.action === 'run') && (
               <label className="slider">
                 <span>يمشي إلى</span>
                 <input type="range" min={0.05} max={0.95} step={0.01} value={a.to ?? 0.7} onChange={(e) => setActor(i, { to: Number(e.target.value) })} />
@@ -168,6 +169,14 @@ export function Inspector({ project, index, onShot, onProject, onMove, onDuplica
             </select>
           )}
           <textarea rows={2} maxLength={160} value={shot.dialogue?.text ?? ''} onChange={(e) => onShot({ dialogue: e.target.value ? { actor: shot.dialogue?.actor ?? 0, text: e.target.value } : undefined })} placeholder="ماذا تقول الشخصية؟" />
+          {shot.dialogue && (
+            <VoiceLine
+              shot={shot}
+              onVoice={(voice, sec) =>
+                onShot(voice ? { voice, duration: Math.min(15, Math.max(shot.duration, Math.ceil((sec + 0.6) * 2) / 2)) } : { voice: undefined })
+              }
+            />
+          )}
         </>
       )}
 

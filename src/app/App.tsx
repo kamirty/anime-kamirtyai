@@ -6,6 +6,7 @@ import { ensureFontLoaded } from '../design/fonts';
 import { describeToProject } from '../engine/parser/describe';
 import { buildSoundtrack, toAudioBuffer } from '../engine/audio/soundtrack';
 import { PreviewAudio } from '../engine/audio/player';
+import { loadVoices } from '../storage/voices';
 import { clearTextCache } from '../engine/renderer/textLayout';
 import { downloadBlob, loadLocal, projectBlob, readProjectFile, safeName, saveLocal } from '../storage/projectFile';
 import { EXAMPLES } from './examples';
@@ -94,9 +95,10 @@ export function App() {
   const getAudio = useCallback(async (): Promise<AudioBuffer | null> => {
     const key = JSON.stringify([project.shots, project.audio, project.fadeOut, music?.name ?? '']);
     if (audioCache.current?.key === key) return audioCache.current.buf;
-    if (!project.audio.sfx && !project.audio.ambience && project.audio.music === 'none' && !music) return null;
+    if (!project.audio.sfx && !project.audio.ambience && project.audio.music === 'none' && !music && !project.shots.some((s) => s.voice)) return null;
     await new Promise((r) => setTimeout(r, 20));
-    const buf = toAudioBuffer(buildSoundtrack(project, music));
+    const voices = await loadVoices(project.shots.flatMap((s) => (s.voice ? [s.voice.id] : [])));
+    const buf = toAudioBuffer(buildSoundtrack(project, music, voices));
     audioCache.current = { key, buf };
     return buf;
   }, [project, music]);
@@ -202,6 +204,9 @@ export function App() {
         </a>
         <input className="title-input" value={project.title} maxLength={80} onChange={(e) => setProject((p) => ({ ...p, title: e.target.value }), false)} aria-label="اسم المشروع" />
         <div className="actions">
+          <a className="button" href="/lab/" title="دروس تفاعلية في مبادئ تحريك الأنمي">
+            مختبر الحركة
+          </a>
           <button type="button" onClick={undo} disabled={!past.length} title="تراجع (Ctrl+Z)">
             ↶ تراجع
           </button>
@@ -211,7 +216,7 @@ export function App() {
           <button type="button" onClick={() => fileRef.current?.click()}>
             فتح
           </button>
-          <button type="button" onClick={() => downloadBlob(projectBlob(project), `${safeName(project.title)}.anime.json`)}>
+          <button type="button" onClick={async () => downloadBlob(await projectBlob(project), `${safeName(project.title)}.anime.json`)}>
             حفظ
           </button>
           <button
@@ -334,6 +339,8 @@ export function App() {
         </div>
         <p className="footer-note">كل شيء يعمل داخل متصفحك: لا نرفع وصفك أو ملفاتك أو فيديوهاتك إلى أي خادم. الرسوم والأصوات مولّدة بالكود، والفيديو ملكك دون أي شعار.</p>
         <nav className="footer-links">
+          <a href="/lab/">مختبر الحركة</a>
+          <span>·</span>
           <a href="https://motion.kamirtyai.com/">مولّد الموشن</a>
           <span>·</span>
           <a href="https://www.kamirtyai.com/">أدوات كاميرتي</a>

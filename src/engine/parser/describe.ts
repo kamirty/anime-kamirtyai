@@ -80,7 +80,7 @@ interface Seg {
   title: boolean;
 }
 
-const ACTION_RANK: ActionId[] = ['power', 'jump', 'cheer', 'clap', 'wave', 'greet', 'point', 'think', 'talk', 'walk', 'stand'];
+const ACTION_RANK: ActionId[] = ['power', 'jump', 'cheer', 'clap', 'wave', 'greet', 'point', 'think', 'talk', 'run', 'walk', 'stand'];
 
 const QUOTE_RE = /[«"“„]([^«»"“”„]{1,200})[»"”“]/g;
 const CAPTION_RE = /(?:عبارة|عباره|جملة|جمله|عنوان|رسالة|رساله|شعار|لافتة|لافته|مكتوب(?:ة|ه)?(?:\s+عليها|\s+عليه)?|نص)\s*[:：]?\s*([^\n«»"“”]{2,160})$/m;
@@ -324,14 +324,14 @@ export function describeToProject(description: string, opts: { aspect?: Aspect; 
     if (shot.text) chip({ kind: 'text', label: `عبارة: «${shot.text.main.slice(0, 30)}»` });
     // framing
     const action = actors[0]?.action;
-    shot.size = seg.size ?? (action === 'power' || action === 'walk' || action === 'jump' || actors.length === 0 ? 'wide' : shot.dialogue ? (actors.length > 1 ? 'medium' : 'close') : 'medium');
+    shot.size = seg.size ?? (action === 'power' || action === 'walk' || action === 'run' || action === 'jump' || actors.length === 0 ? 'wide' : shot.dialogue ? (actors.length > 1 ? 'medium' : 'close') : 'medium');
     if (action === 'power') shot.size = 'wide';
     shot.camera = shot.size === 'wide' && !action ? 'push' : shot.size === 'close' ? 'push' : 'still';
     const words = shot.dialogue ? shot.dialogue.text.split(/\s+/).length : 0;
     shot.duration = Math.max(
       3,
       shot.dialogue ? Math.min(8, 1.6 + words * 0.5) : 0,
-      action === 'power' ? 4.5 : action === 'walk' ? 3.5 : action === 'jump' ? 2.5 : 0,
+      action === 'power' ? 4.5 : action === 'walk' ? 3.5 : action === 'run' ? 3 : action === 'jump' ? 2.5 : 0,
       shot.text ? 4 : 0,
     );
     shot.duration = Math.round(shot.duration * 2) / 2;

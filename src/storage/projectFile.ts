@@ -1,5 +1,6 @@
 import { parseProject } from '../domain/sanitize';
 import type { Project } from '../domain/types';
+import { decodeVoice, encodeVoice, getVoice, putVoice } from './voices';
 
 export function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
@@ -12,17 +13,40 @@ export function downloadBlob(blob: Blob, filename: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
-export const projectBlob = (p: Project) => new Blob([JSON.stringify(p, null, 2)], { type: 'application/json' });
+/** Project file with recorded lines embedded, so a saved project opens with its voices on any device. */
+export async function projectBlob(p: Project): Promise<Blob> {
+  const voices: Record<string, string> = {};
+  for (const s of p.shots) {
+    if (!s.voice || voices[s.voice.id]) continue;
+    const pcm = await getVoice(s.voice.id);
+    if (pcm) voices[s.voice.id] = encodeVoice(pcm);
+  }
+  const data = Object.keys(voices).length ? { ...p, voices } : p;
+  return new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+}
 
 export async function readProjectFile(file: File): Promise<Project> {
-  if (file.size > 5 * 1024 * 1024) throw new Error('الملف كبير جدًا لمشروع.');
+  if (file.size > 80 * 1024 * 1024) throw new Error('الملف كبير جدًا لمشروع.');
   let data: unknown;
   try {
     data = JSON.parse(await file.text());
   } catch {
     throw new Error('الملف ليس JSON صالحًا.');
   }
-  return parseProject(data);
+  const project = parseProject(data);
+  const voices = (data as { voices?: unknown }).voices;
+  if (voices && typeof voices === 'object') {
+    for (const [id, b64] of Object.entries(voices as Record<string, unknown>)) {
+      if (typeof b64 === 'string' && /^[a-zA-Z0-9_-]{1,32}$/.test(id)) {
+        try {
+          await putVoice(id, decodeVoice(b64));
+        } catch {
+          /* a damaged voice is skipped; the shot keeps its text */
+        }
+      }
+    }
+  }
+  return project;
 }
 
 const KEY = 'kamirty-anime:autosave:v1';

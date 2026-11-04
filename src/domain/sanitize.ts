@@ -121,7 +121,7 @@ function fixActor(v: unknown, castIds: string[]): Actor | null {
   if (!cast) return null;
   const action = oneOf<ActionId>(v.action, ACTIONS, 'stand');
   const a: Actor = { cast, action, expression: oneOf(v.expression, EXPRESSIONS, 'calm'), x: num(v.x, 0.05, 0.95, 0.5) };
-  if (action === 'walk') a.to = num(v.to, 0.05, 0.95, a.x < 0.5 ? 0.7 : 0.3);
+  if (action === 'walk' || action === 'run') a.to = num(v.to, 0.05, 0.95, a.x < 0.5 ? 0.8 : 0.2);
   return a;
 }
 
@@ -180,6 +180,9 @@ function fixShot(v: unknown, i: number, castIds: string[], propIds: string[]): S
     const text = str(v.dialogue.text, 160);
     const idx = Math.round(num(v.dialogue.actor, 0, MAX_ACTORS_PER_SHOT - 1, 0));
     if (text && actors[idx]) shot.dialogue = { actor: idx, text };
+  }
+  if (isObj(v.voice) && typeof v.voice.levels === 'string' && /^[012]{1,4000}$/.test(v.voice.levels) && typeof v.voice.id === 'string' && ID.test(v.voice.id)) {
+    shot.voice = { id: v.voice.id, levels: v.voice.levels };
   }
   if (Array.isArray(v.props)) {
     const props = v.props.map((p) => fixPlacement(p, propIds)).filter((p): p is PropPlacement => p !== null).slice(0, 6);

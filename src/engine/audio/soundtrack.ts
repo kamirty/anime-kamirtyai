@@ -150,10 +150,15 @@ function actionSfx(m: Mixer, shot: Shot, t0: number, dur: number, seed: number) 
   shot.actors.forEach((a, ai) => {
     const pan = (a.x - 0.5) * 1.2;
     switch (a.action) {
-      case 'walk': {
+      case 'walk':
+      case 'run': {
+        const run = a.action === 'run';
         const hard = shot.place === 'city' || shot.place === 'classroom' || shot.place === 'home';
         const step = cached(`step${hard}`, () => normalize(hard ? bandpass(noise(0.08, 11), 900, 1.2).map((v, i) => v * Math.exp(-i / SR / 0.015)) : lowpass(noise(0.12, 12), 1600).map((v, i) => v * Math.exp(-i / SR / 0.03))));
-        for (let f = 0; f / FPS < Math.max(0.5, dur - 0.6); f += 8) m.add(step, t0 + f / FPS, 0.18, pan);
+        // one footfall per contact drawing: every 8 frames walking, every 6 running
+        const until = Math.max(0.5, (run ? 0.75 : 1) * (dur - 0.6));
+        for (let f = 0; f / FPS < until; f += run ? 6 : 8) m.add(step, t0 + f / FPS, run ? 0.24 : 0.18, pan);
+        if (run) m.add(whoosh(0.5, 400, 2000, 0.2, seed + ai, 1.2), t0 + 0.05, 0.1, pan);
         break;
       }
       case 'clap':
@@ -284,7 +289,7 @@ function music(m: Mixer, project: Project, total: number) {
   }
 }
 
-export function buildSoundtrack(project: Project, userMusic?: { L: Float32Array; R: Float32Array } | null): Soundtrack {
+export function buildSoundtrack(project: Project, userMusic?: { L: Float32Array; R: Float32Array } | null, voices?: Map<string, Float32Array>): Soundtrack {
   const total = totalFrames(project) / FPS;
   const m = new Mixer(len(total));
   let t0 = 0;
@@ -299,8 +304,13 @@ export function buildSoundtrack(project: Project, userMusic?: { L: Float32Array;
         m.add(shing(1.2, seed + 30), t0 + 0.3, 0.07, 0, 0.6);
         if (shot.text.style === 'title') m.add(kick(90, 38, 1.2, 0.4, 0.2), t0 + 0.3, 0.4, 0, 0.6);
       }
-      if (shot.dialogue) m.add(cached('blip', () => normalize(osc(0.08, (t) => 900 + 600 * t).map((v, k) => v * Math.sin((Math.PI * k) / len(0.08))))), t0 + 0.2, 0.05);
+      if (shot.dialogue && !shot.voice) m.add(cached('blip', () => normalize(osc(0.08, (t) => 900 + 600 * t).map((v, k) => v * Math.sin((Math.PI * k) / len(0.08))))), t0 + 0.2, 0.05);
       if (i < project.shots.length - 1 && shot.transition !== 'cut') m.add(whoosh(0.6, 300, 2400, 0.42, seed + 40), t0 + dur - 0.42, 0.18, 0, 0.3);
+    }
+    const voice = shot.voice && voices?.get(shot.voice.id);
+    if (voice) {
+      const pan = shot.dialogue && shot.actors[shot.dialogue.actor] ? (shot.actors[shot.dialogue.actor].x - 0.5) * 0.6 : 0;
+      m.add(voice.length > len(dur) ? voice.subarray(0, len(dur)) : voice, t0 + 6 / FPS, 1.1, pan, 0.12);
     }
     t0 += dur;
   });

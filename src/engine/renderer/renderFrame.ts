@@ -1,13 +1,15 @@
 import { ASPECTS, FPS, type Character, type Project, type Shot, type Size } from '../../domain/types';
 import { shotAt } from '../../domain/timeline';
 import { cssFamily, fontById } from '../../design/fonts';
-import { drawCharacter, rig } from '../art/body';
+import { drawCharacter, rig, type Pose } from '../art/body';
+import { drawCharacterSide } from '../art/side';
 import { drawEffect } from '../art/effects';
 import { INTERIOR, LAYERS, drawPlace, skyBody, type World } from '../art/places';
 import { poseAt, type PoseResult } from '../art/poses';
 import { INK, LINE, PRACTICAL, RED, type Ctx, clamp, easeInOut, easeOut, hash, mulberry } from '../art/paint';
 import { drawProp } from '../art/props';
 import { fitText } from './textLayout';
+import { levelAt } from '../audio/lipsync';
 
 /**
  * The single source of truth for every frame, in preview and export alike.
@@ -277,7 +279,7 @@ function drawImpactFrame(ctx: Ctx, project: Project, a: ActorFrame, flash: numbe
   ctx.scale(bodyT.zL, bodyT.zL);
   ctx.translate(a.wx, L.gY);
   ctx.scale(L.unit, L.unit);
-  drawCharacter(ctx, a.ch, a.pr.pose, { sil: INK, k: 1 });
+  drawAny(ctx, a.ch, a.pr.pose, { sil: INK, k: 1 });
   ctx.restore();
   void project;
 }
@@ -333,6 +335,9 @@ function drawCracks(ctx: Ctx, target: { x: number; y: number; r: number }, since
   ctx.restore();
 }
 
+const drawAny = (ctx: Ctx, ch: Character, pose: Pose, paint?: { sil: string; k: number }) =>
+  pose.side ? drawCharacterSide(ctx, ch, pose, pose.side, paint) : drawCharacter(ctx, ch, pose, paint);
+
 export interface RenderOptions {
   /** Skip text and bubbles (thumbnails). */
   noText?: boolean;
@@ -356,7 +361,9 @@ export function renderFrame(project: Project, frame: number, ctx: Ctx, out: Size
   shot.actors.forEach((a, i) => {
     const ch = castById.get(a.cast);
     if (!ch) return;
-    const pr = poseAt(a, t, dur, `${shot.id}:${i}`, shot.dialogue?.actor === i);
+    const speaking = shot.dialogue?.actor === i;
+    const level = speaking && shot.voice ? levelAt(shot.voice.levels, at.local) : undefined;
+    const pr = poseAt(a, t, dur, `${shot.id}:${i}`, speaking, level, !!shot.voice);
     actors.push({ ch, pr, wx: pr.x * L.W });
   });
 
@@ -399,7 +406,7 @@ export function renderFrame(project: Project, frame: number, ctx: Ctx, out: Size
     ctx.transform(bodyT.zL, 0, 0, bodyT.zL, bodyT.tx, bodyT.ty);
     ctx.translate(a.wx, L.gY);
     ctx.scale(L.unit, L.unit);
-    const info = drawCharacter(ctx, a.ch, a.pr.pose);
+    const info = drawAny(ctx, a.ch, a.pr.pose);
     ctx.restore();
     const head = toScreen(a.wx, L.gY + info.headTop * L.unit);
     anchors.push(head);
