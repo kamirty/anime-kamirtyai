@@ -150,12 +150,19 @@ function actionSfx(m: Mixer, shot: Shot, t0: number, dur: number, seed: number) 
   shot.actors.forEach((a, ai) => {
     const pan = (a.x - 0.5) * 1.2;
     switch (a.action) {
-      case 'walk': {
+      case 'walk':
+      case 'run': {
         const hard = shot.place === 'city' || shot.place === 'classroom' || shot.place === 'home';
         const step = cached(`step${hard}`, () => normalize(hard ? bandpass(noise(0.08, 11), 900, 1.2).map((v, i) => v * Math.exp(-i / SR / 0.015)) : lowpass(noise(0.12, 12), 1600).map((v, i) => v * Math.exp(-i / SR / 0.03))));
-        for (let f = 0; f / FPS < Math.max(0.5, dur - 0.6); f += 8) m.add(step, t0 + f / FPS, 0.18, pan);
+        for (let f = 0; f / FPS < Math.max(0.5, dur - 0.6); f += a.action === 'run' ? 5 : 8) m.add(step, t0 + f / FPS, a.action === 'run' ? 0.24 : 0.18, pan);
         break;
       }
+      case 'dance':
+        for (let f = 4; f / FPS < dur; f += 12) m.add(cached('clap', () => clap(4)), t0 + f / FPS, 0.08, pan, 0.15);
+        break;
+      case 'nod':
+        m.add(bell(880, 1), t0 + 0.2, 0.035, pan);
+        break;
       case 'clap':
         for (let f = 0; f / FPS < dur; f += 6) m.add(cached('clap', () => clap(4)), t0 + f / FPS, 0.22, pan, 0.3);
         break;
