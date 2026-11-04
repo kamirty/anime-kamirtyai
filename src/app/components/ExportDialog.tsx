@@ -5,6 +5,7 @@ import { detectExportPlan, type DetectResult } from '../../engine/export/capabil
 import type { VerifyReport } from '../../engine/export/verify';
 import { downloadBlob, safeName } from '../../storage/projectFile';
 import { ExtraExports } from './ExtraExports';
+import type { LipSyncTracks } from '../../engine/audio/lipsync';
 
 type State =
   | { status: 'idle' }
@@ -17,10 +18,11 @@ type State =
 interface Props {
   project: Project;
   getAudio: () => Promise<AudioBuffer | null>;
+  lipSync?: LipSyncTracks;
   onClose: () => void;
 }
 
-export function ExportDialog({ project, getAudio, onClose }: Props) {
+export function ExportDialog({ project, getAudio, lipSync, onClose }: Props) {
   const [quality, setQuality] = useState<'sd' | 'hd'>('hd');
   const size = ASPECTS[project.aspect][quality];
   const [cap, setCap] = useState<DetectResult | null>(null);
@@ -51,6 +53,7 @@ export function ExportDialog({ project, getAudio, onClose }: Props) {
       const blob = await exportVideo(project, cap.plan, {
         signal: controller.signal,
         audio,
+        lipSync,
         onProgress: (p) => setState({ status: 'running', frame: p.frame, startedAt, now: performance.now() }),
       });
       const seconds = (performance.now() - startedAt) / 1000;
