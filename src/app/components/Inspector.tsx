@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react';
+import { drawCharacter, restPose } from '../../engine/art/body';
 import {
   ACTIONS,
   ASPECTS,
@@ -21,6 +23,30 @@ import {
 } from '../../domain/types';
 import { DEFAULT_COLORS, newCharacter } from '../../domain/sanitize';
 import { FONTS } from '../../design/fonts';
+
+const CHARACTER_PRESETS = [
+  { label: 'ولد عُماني', kind: 'boy', outfit: 'dishdasha', color: '#f6f3ee', accent: '#0b8a3c' },
+  { label: 'رجل بالمصر', kind: 'man', outfit: 'massar', color: '#f6f3ee', accent: '#9e4f35' },
+  { label: 'فتاة بالزي التراثي', kind: 'girl', outfit: 'omaniDress', color: '#9b245a', accent: '#ffc107' },
+  { label: 'طالبة عُمانية', kind: 'girl', outfit: 'school', color: '#782b41', accent: '#f6f3ee' },
+  { label: 'امرأة بالعباءة', kind: 'woman', outfit: 'abaya', color: '#17151c', accent: '#9d842e' },
+] as const;
+
+function CharacterPreview({ character }: { character: Character }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const ctx = ref.current?.getContext('2d');
+    if (!ctx) return;
+    ctx.fillStyle = '#f7f4ed';
+    ctx.fillRect(0, 0, 160, 146);
+    ctx.save();
+    ctx.translate(80, 132);
+    ctx.scale(0.11, 0.11);
+    drawCharacter(ctx, character, restPose('calm'));
+    ctx.restore();
+  }, [character]);
+  return <canvas ref={ref} width={160} height={146} className="character-preview" aria-label={'معاينة الشخصية ' + character.name} />;
+}
 
 interface Props {
   project: Project;
@@ -201,6 +227,7 @@ export function Inspector({ project, index, onShot, onProject, onMove, onDuplica
         <summary>الشخصيات ({project.cast.length})</summary>
         {project.cast.map((c) => (
           <div key={c.id} className="char-card">
+            <CharacterPreview character={c} />
             <div className="item-row">
               <input value={c.name} maxLength={40} onChange={(e) => setChar(c.id, { name: e.target.value })} aria-label="اسم الشخصية" />
               <button
@@ -236,6 +263,13 @@ export function Inspector({ project, index, onShot, onProject, onMove, onDuplica
                   </option>
                 ))}
               </select>
+            </div>
+            <div className="character-presets" role="group" aria-label="نماذج جاهزة للشخصية">
+              {CHARACTER_PRESETS.map((preset) => (
+                <button key={preset.label} type="button" onClick={() => setChar(c.id, { kind: preset.kind, outfit: preset.outfit, color: preset.color, accent: preset.accent })}>
+                  {preset.label}
+                </button>
+              ))}
             </div>
             <div className="swatches" role="group" aria-label="لون البشرة">
               {SKINS.map((s, i) => (
