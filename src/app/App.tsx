@@ -7,6 +7,7 @@ import { describeToProject } from '../engine/parser/describe';
 import { buildSoundtrack, toAudioBuffer } from '../engine/audio/soundtrack';
 import { PreviewAudio } from '../engine/audio/player';
 import type { SceneVoices } from '../engine/audio/soundtrack';
+import { createLipSync } from '../engine/audio/lipsync';
 import { clearTextCache } from '../engine/renderer/textLayout';
 import { downloadBlob, loadLocal, projectBlob, readProjectFile, safeName, saveLocal } from '../storage/projectFile';
 import { EXAMPLES } from './examples';
@@ -72,6 +73,7 @@ export function App() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const total = totalFrames(project);
+  const lipSync = useMemo(() => createLipSync(voices), [voices]);
 
   const setProject = useCallback((next: Project | ((p: Project) => Project), record = true) => {
     setProjectRaw((prev) => {
@@ -288,7 +290,7 @@ export function App() {
               <span className="small muted">للمزيد من الحركات والشخصيات والأزياء انتقل إلى «احترافي».</span>
             </section>
           )}
-          <Preview project={project} frame={frame} playing={playing} preparing={preparing} ready={ready} renderKey={renderKey} onFrame={(f) => (stop(), setFrame(f))} onTogglePlay={togglePlay} />
+          <Preview project={project} frame={frame} playing={playing} preparing={preparing} ready={ready} renderKey={renderKey} lipSync={lipSync} onFrame={(f) => (stop(), setFrame(f))} onTogglePlay={togglePlay} />
           <Timeline
             project={project}
             selected={selected}
@@ -392,7 +394,7 @@ export function App() {
       </footer>
 
       {libraryOpen && <LibraryDialog project={project} description={description} onClose={() => setLibraryOpen(false)} onLoad={(p, d) => { setDescription(d); loadProject(p, 'تم فتح مشروعك المحفوظ.'); }} />}
-      {exporting && <ExportDialog project={project} getAudio={getAudio} onClose={() => setExporting(false)} />}
+      {exporting && <ExportDialog project={project} getAudio={getAudio} lipSync={lipSync} onClose={() => setExporting(false)} />}
     </div>
   );
 }
