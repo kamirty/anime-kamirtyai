@@ -9,13 +9,15 @@ interface Props {
   description: string;
   aspect: Aspect;
   font: string;
+  mode: 'simple' | 'pro';
+  onMode: (mode: 'simple' | 'pro') => void;
   onDescription: (d: string) => void;
   onProject: (p: Project, note?: string) => void;
 }
 
 const MAX_DESC = 1500;
 
-export function Sidebar({ description, aspect, font, onDescription, onProject }: Props) {
+export function Sidebar({ description, aspect, font, mode, onMode, onDescription, onProject }: Props) {
   const [tab, setTab] = useState<'describe' | 'claude'>('describe');
   const [report, setReport] = useState<ParseReport | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -57,6 +59,10 @@ export function Sidebar({ description, aspect, font, onDescription, onProject }:
 
   return (
     <aside className="sidebar">
+      <div className="editor-modes" role="group" aria-label="مستوى المحرر">
+        <button type="button" className={mode === 'simple' ? 'active' : ''} aria-pressed={mode === 'simple'} onClick={() => onMode('simple')}>سهل</button>
+        <button type="button" className={mode === 'pro' ? 'active' : ''} aria-pressed={mode === 'pro'} onClick={() => onMode('pro')}>احترافي</button>
+      </div>
       <details className="welcome-guide">
         <summary>📖 كيف أصنع فيديو أنمي في 3 خطوات؟</summary>
         <ol>
