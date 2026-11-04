@@ -57,6 +57,15 @@ export function Sidebar({ description, aspect, font, onDescription, onProject }:
 
   return (
     <aside className="sidebar">
+      <details className="welcome-guide">
+        <summary>📖 كيف أصنع فيديو أنمي في 3 خطوات؟</summary>
+        <ol>
+          <li>اكتب وصفًا بالعربية، أو اختر مثالًا جاهزًا واضغط «أنشئ المشهد».</li>
+          <li>شاهد المعاينة، وحرّر اللقطات والشخصيات والصوت في الوضع الاحترافي إذا أردت.</li>
+          <li>اختر «تنزيل الفيديو» لحفظه، أو «مشاريعي» لحفظ نسخة محلية قابلة للتعديل.</li>
+        </ol>
+        <p className="small muted">يعتمد الإنشاء السريع على رسوم جاهزة ومحرك تحريك محلي، وليس على توليد صور جديدة بنموذج ذكاء اصطناعي. للأفكار خارج المكتبة استخدم تبويب Claude.</p>
+      </details>
       <div className="tabs" role="tablist">
         <button role="tab" aria-selected={tab === 'describe'} className={tab === 'describe' ? 'active' : ''} onClick={() => setTab('describe')}>
           صِف مشهدك
