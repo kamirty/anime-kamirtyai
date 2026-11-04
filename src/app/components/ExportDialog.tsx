@@ -4,6 +4,7 @@ import { fmtTime, totalFrames } from '../../domain/timeline';
 import { detectExportPlan, type DetectResult } from '../../engine/export/capabilities';
 import type { VerifyReport } from '../../engine/export/verify';
 import { downloadBlob, safeName } from '../../storage/projectFile';
+import { ExtraExports } from './ExtraExports';
 
 type State =
   | { status: 'idle' }
@@ -124,6 +125,7 @@ export function ExportDialog({ project, getAudio, onClose }: Props) {
         {state.status === 'verifying' && <p>جارٍ التحقق من الملف الناتج…</p>}
         {state.status === 'cancelled' && <div className="alert">أُلغي التصدير.</div>}
         {state.status === 'error' && <div className="alert error">تعذّر التصدير: {state.message}</div>}
+        <ExtraExports project={project} disabled={running} />
         {state.status === 'done' && (
           <div className="result">
             <video src={state.url} controls playsInline />
