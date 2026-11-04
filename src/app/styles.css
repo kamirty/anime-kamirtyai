@@ -551,3 +551,8 @@ a.button:hover { border-color: var(--rule); }
 .guide-step { min-height: 130px; padding: 16px; background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--radius); }
 .guide-step h3 { margin: 0 0 10px; }
 .guide-step p { margin: 0; }
+
+/* Prevent the sticky header from covering its own controls after scrolling
+   the editor on desktop or small screens. The preview remains sticky. */
+.topbar { position: relative; top: auto; }
+.center { top: 12px; }
