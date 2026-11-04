@@ -113,7 +113,7 @@ export function Inspector({ project, index, onShot, onProject, onMove, onDuplica
                 onChange={(e) => {
                   const action = e.target.value as Shot['actors'][number]['action'];
                   const min = ACTIONS.find((x) => x.id === action)?.minSeconds ?? 0;
-                  const actors = shot.actors.map((x, k) => (k === i ? { ...x, action, to: action === 'walk' ? (a.x < 0.5 ? 0.75 : 0.25) : undefined } : x));
+                  const actors = shot.actors.map((x, k) => (k === i ? { ...x, action, to: (action === 'walk' || action === 'run') ? (a.x < 0.5 ? 0.75 : 0.25) : undefined } : x));
                   onShot({ actors, duration: Math.max(shot.duration, min) });
                 }}
                 aria-label="الحركة"
@@ -138,7 +138,7 @@ export function Inspector({ project, index, onShot, onProject, onMove, onDuplica
               </span>
               <input type="range" min={0.05} max={0.95} step={0.01} value={a.x} onChange={(e) => setActor(i, { x: Number(e.target.value) })} />
             </label>
-            {a.action === 'walk' && (
+            {(a.action === 'walk' || a.action === 'run') && (
               <label className="slider">
                 <span>يمشي إلى</span>
                 <input type="range" min={0.05} max={0.95} step={0.01} value={a.to ?? 0.7} onChange={(e) => setActor(i, { to: Number(e.target.value) })} />
