@@ -23,7 +23,7 @@ interface Props {
 }
 
 export function ExportDialog({ project, getAudio, lipSync, onClose }: Props) {
-  const [quality, setQuality] = useState<'sd' | 'hd'>('hd');
+  const [quality, setQuality] = useState<'sd' | 'hd'>(() => window.matchMedia?.('(max-width: 600px)').matches ? 'sd' : 'hd');
   const size = ASPECTS[project.aspect][quality];
   const [cap, setCap] = useState<DetectResult | null>(null);
   const [state, setState] = useState<State>({ status: 'idle' });
@@ -32,7 +32,9 @@ export function ExportDialog({ project, getAudio, lipSync, onClose }: Props) {
 
   useEffect(() => {
     setCap(null);
-    detectExportPlan(size).then(setCap);
+    let active = true;
+    detectExportPlan(size).then((result) => { if (active) setCap(result); }).catch(() => { if (active) setCap({ supported: false, reason: 'تعذر فحص دعم الفيديو في هذا المتصفح.' }); });
+    return () => { active = false; };
   }, [size.width, size.height]);
   useEffect(() => () => abortRef.current?.abort(), []);
   useEffect(
