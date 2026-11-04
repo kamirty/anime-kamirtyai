@@ -186,12 +186,15 @@ export function drawCharacterSide(ctx: Ctx, ch: Character, pose: Pose, gait: Sid
   const female = isFemale(ch.kind);
   const legsVisible = (ch.outfit === 'casual' && !female) || ch.outfit === 'labcoat';
   const ph = gait.phase * Math.PI * 2;
-  const amp = gait.run ? 0.78 : 0.42;
+  // inside a robe the steps are short and the cloth hides the legs; running opens the stride
+  const robeWalk = !legsVisible;
+  const amp = gait.run ? (robeWalk ? 0.6 : 0.78) : robeWalk ? 0.22 : 0.42;
   // near leg leads at phase 0
   const legNear = amp * Math.cos(ph);
   const legFar = -legNear;
-  const kneeNear = Math.max(0, -Math.sin(ph)) * (gait.run ? 1.4 : 0.7);
-  const kneeFar = Math.max(0, Math.sin(ph)) * (gait.run ? 1.4 : 0.7);
+  const knee = gait.run ? 1.4 : robeWalk ? 0.45 : 0.7;
+  const kneeNear = Math.max(0, -Math.sin(ph)) * knee;
+  const kneeFar = Math.max(0, Math.sin(ph)) * knee;
   const bob = gait.run ? -Math.abs(Math.sin(ph)) * 0.05 * H : -Math.abs(Math.sin(ph)) * 0.014 * H;
   const lean = gait.run ? 0.16 : 0.04;
   const legLen = -r.hipY - 0.02 * H;
@@ -245,12 +248,12 @@ export function drawCharacterSide(ctx: Ctx, ch: Character, pose: Pose, gait: Sid
     strokeLimb(ctx, nearLeg, pants, r.pant, o, paint);
     foot(nearLeg, '#1d1d22', true);
   } else {
-    // shins under the hem (sirwal for the Omani dress), then the sandals
+    // walking: only the sandals peek out under the hem; running: the shins show (sirwal for the Omani dress)
     const shin = ch.outfit === 'omaniDress' ? ch.accent : skin;
     const lower = (L: Limb): Limb => ({ s: L.e, e: L.e, h: L.h });
-    strokeLimb(ctx, lower(farLeg), darken(shin, 0.15), 0.045 * H, o * 0.8, paint);
+    if (gait.run) strokeLimb(ctx, lower(farLeg), darken(shin, 0.15), 0.045 * H, o * 0.8, paint);
     foot(farLeg, '#1d140f', false);
-    strokeLimb(ctx, lower(nearLeg), shin, 0.045 * H, o * 0.8, paint);
+    if (gait.run) strokeLimb(ctx, lower(nearLeg), shin, 0.045 * H, o * 0.8, paint);
     foot(nearLeg, '#2a1d17', true);
   }
 
@@ -273,8 +276,11 @@ export function drawCharacterSide(ctx: Ctx, ch: Character, pose: Pose, gait: Sid
     // running lifts the hem and sweeps it back; the hem never stretches wider than the cloth allows
     const hemY = (ch.outfit === 'omaniDress' ? -0.17 * H : r.hemY) - (gait.run ? 0.1 * H : 0);
     const flare = ch.outfit === 'abaya' || ch.outfit === 'omaniDress' ? 0.03 * H : 0.01 * H;
-    const back = Math.max(-0.17 * H, Math.min(-0.09 * H, backX - 0.02 * H)) - (gait.run ? 0.04 * H : 0);
-    const front = Math.min(0.15 * H, Math.max(0.1 * H, frontX + 0.04 * H));
+    // walking: a straight robe whose hem only sways a little with the leading foot
+    const back = gait.run
+      ? Math.max(-0.17 * H, Math.min(-0.09 * H, backX - 0.02 * H)) - 0.04 * H
+      : -0.11 * H - Math.max(0, -backX - 0.06 * H) * 0.35;
+    const front = gait.run ? Math.min(0.15 * H, Math.max(0.1 * H, frontX + 0.04 * H)) : 0.12 * H + Math.max(0, frontX - 0.06 * H) * 0.45;
     const robe = robeSide(H, top, hemY, back, front, flare);
     cel(ctx, robe, ch.color, o, paint);
     shade(ctx, `M${n(-0.085 * H)},${n(top + 0.09 * H)} L${n(-0.08 * H)},${n(top + 0.3 * H)} L${n(back)},${n(hemY)} L${n(-0.03 * H)},${n(hemY)} L${n(-0.04 * H)},${n(top + 0.09 * H)} Z`, paint);
