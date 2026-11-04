@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ASPECTS, FPS, type Project, type Shot } from '../domain/types';
+import { ASPECTS, FPS, MAX_TOTAL_SECONDS, type Project, type Shot } from '../domain/types';
 import { shotAt, shotStarts, totalFrames } from '../domain/timeline';
 import { newShot } from '../domain/sanitize';
 import { ensureFontLoaded } from '../design/fonts';
@@ -39,6 +39,7 @@ async function decodeMusic(file: File): Promise<UserMusic> {
   const data = await file.arrayBuffer();
   const ctx = new OfflineAudioContext(2, 48000, 48000);
   const buf = await ctx.decodeAudioData(data);
+  if (buf.duration > MAX_TOTAL_SECONDS + 5) throw new Error('الملف الصوتي أطول من دقيقتين. قصّه قبل إضافته.');
   const off = new OfflineAudioContext(2, Math.ceil(buf.duration * 48000), 48000);
   const src = off.createBufferSource();
   src.buffer = buf;
@@ -374,6 +375,8 @@ export function App() {
             setSelected(selected + 1);
           }}
           onDelete={() => {
+            const shotId = project.shots[selected]?.id;
+            setVoices((prev) => { const next = { ...prev }; delete next[shotId]; return next; });
             setProject((p) => ({ ...p, shots: p.shots.filter((_, i) => i !== selected) }));
             setSelected(Math.max(0, selected - 1));
           }}
