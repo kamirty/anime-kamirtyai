@@ -546,3 +546,8 @@ a.button:hover { border-color: var(--rule); }
 .extra-exports { display: grid; gap: 5px; margin-top: 16px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); }
 .extra-exports h3 { margin: 0; font-size: 0.95rem; }
 .extra-exports p { margin: 0 0 5px; }
+
+.guided-tour { width: min(620px, 96vw); }
+.guide-step { min-height: 130px; padding: 16px; background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--radius); }
+.guide-step h3 { margin: 0 0 10px; }
+.guide-step p { margin: 0; }
