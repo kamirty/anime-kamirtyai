@@ -1,8 +1,19 @@
 import { useEffect, useState } from 'react';
+import type { Project } from '../../domain/types';
 import { LESSONS } from '../../lab/lessons';
+import { MotionLibrary } from './MotionLibrary';
 
 /** The Motion Lab inside the studio: short interactive lessons on anime motion, each one applicable to your scene. */
-export function MotionLab({ onClose, onTry }: { onClose: () => void; onTry: (description: string) => void }) {
+interface Props {
+  project: Project;
+  shotIndex: number;
+  onClose: () => void;
+  onTry: (description: string) => void;
+  onApply: (next: Project, label: string, everyShot: boolean) => void;
+}
+
+export function MotionLab({ project, shotIndex, onClose, onTry, onApply }: Props) {
+  const [tab, setTab] = useState<'library' | 'lessons'>('library');
   const [index, setIndex] = useState(0);
   const lesson = LESSONS[index];
   useEffect(() => {
@@ -19,6 +30,16 @@ export function MotionLab({ onClose, onTry }: { onClose: () => void; onTry: (des
             ✕
           </button>
         </div>
+        <div className="tabs lab-tabs" role="tablist">
+          <button role="tab" aria-selected={tab === 'library'} className={tab === 'library' ? 'active' : ''} onClick={() => setTab('library')}>
+            مكتبة الحركات (50)
+          </button>
+          <button role="tab" aria-selected={tab === 'lessons'} className={tab === 'lessons' ? 'active' : ''} onClick={() => setTab('lessons')}>
+            دروس التحريك (8)
+          </button>
+        </div>
+        {tab === 'library' && <MotionLibrary project={project} shotIndex={shotIndex} onApply={onApply} />}
+        {tab === 'lessons' && (
         <div className="lab">
           <nav className="lab-nav" aria-label="الدروس">
             <ol>
@@ -52,6 +73,7 @@ export function MotionLab({ onClose, onTry }: { onClose: () => void; onTry: (des
             </div>
           </article>
         </div>
+        )}
       </div>
     </div>
   );

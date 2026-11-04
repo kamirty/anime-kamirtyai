@@ -131,6 +131,7 @@ export function fixRig(v: unknown): RigPose | null {
     head: num(v.head, -0.6, 0.6, 0),
     lean: num(v.lean, -0.5, 0.5, 0),
     crouch: num(v.crouch, 0, 1, 0),
+    lift: num(v.lift, 0, 1, 0) || undefined,
   };
 }
 
@@ -146,7 +147,10 @@ function fixActor(v: unknown, castIds: string[]): Actor | null {
   if (action === 'walk' || action === 'run') a.to = num(v.to, 0.05, 0.95, a.x < 0.5 ? 0.7 : 0.3);
   if (isObj(v.rig)) {
     const from = fixRig(v.rig.from);
-    if (from) a.rig = { from, to: fixRig(v.rig.to) ?? undefined };
+    if (from) {
+      const loop = typeof v.rig.loop === 'number' ? num(v.rig.loop, 0.2, 6, 1) : undefined;
+      a.rig = { from, to: fixRig(v.rig.to) ?? undefined, loop };
+    }
   }
   return a;
 }

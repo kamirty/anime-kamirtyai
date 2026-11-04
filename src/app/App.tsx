@@ -428,6 +428,16 @@ export function App() {
       {exporting && <ExportDialog project={project} getAudio={getAudio} lipSync={lipSync} onClose={() => setExporting(false)} />}
       {labOpen && (
         <MotionLab
+          project={project}
+          shotIndex={selected}
+          onApply={(next, label, everyShot) => {
+            setLabOpen(false);
+            stop();
+            setProject(next);
+            const starts = shotStarts(next);
+            setFrame(everyShot ? 0 : starts[selected] ?? 0);
+            setNotice({ text: `طبّقت حركة «${label}» على ${everyShot ? 'كل اللقطات' : `اللقطة ${selected + 1}`}. اضغط ▶ لتشاهدها. ويمكنك التراجع بـ Ctrl+Z.` });
+          }}
           onClose={() => setLabOpen(false)}
           onTry={(text) => {
             setLabOpen(false);

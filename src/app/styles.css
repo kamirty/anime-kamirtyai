@@ -604,3 +604,19 @@ a.try-it:hover, button.try-it:hover { background: var(--brand); color: var(--on-
 .pose-editor .slider { width: 100%; }
 .rig-editor { display: grid; gap: 6px; margin-top: 6px; }
 @media (max-width: 860px) { .lab-modal .lab { grid-template-columns: minmax(0, 1fr); } }
+
+.lab-tabs { margin-top: 12px; }
+.motion-lib { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 16px; margin-top: 12px; }
+.motion-side { display: grid; gap: 8px; align-content: start; justify-items: start; position: sticky; top: 0; }
+.motion-side canvas { width: 240px; max-width: 100%; height: auto; border: 1px solid var(--border); border-radius: var(--radius); background: #000; }
+.motion-side .big { width: 100%; }
+.motion-main { display: grid; gap: 10px; align-content: start; }
+.motion-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.motion-card { display: grid; gap: 2px; text-align: start; padding: 10px; border-radius: var(--radius); }
+.motion-card .mi { font-size: 1.5rem; line-height: 1.2; }
+.motion-card small { color: var(--muted); font-size: 0.76rem; line-height: 1.4; }
+.motion-card.active { border: 2px solid var(--ink); background: var(--brand-soft); }
+@media (max-width: 760px) {
+  .motion-lib { grid-template-columns: minmax(0, 1fr); }
+  .motion-side { position: static; justify-items: center; }
+}

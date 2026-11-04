@@ -90,7 +90,8 @@ export function poseAt(actor: Actor, t: number, duration: number, seed0: string,
       const rig = actor.rig;
       if (!rig) break;
       const to = rig.to ?? rig.from;
-      const k = easeInOut(clamp(tq / Math.max(0.3, duration * 0.6), 0, 1));
+      // looping gestures ping-pong between the two poses; the rest move once and hold
+      const k = rig.loop && rig.to ? 0.5 - 0.5 * Math.cos(((tq % rig.loop) / rig.loop) * Math.PI * 2) : easeInOut(clamp(tq / Math.max(0.3, duration * 0.6), 0, 1));
       const mix = (a: number, b: number) => a + (b - a) * k;
       const mixJ = (a: [number, number], b: [number, number]): [number, number] => [mix(a[0], b[0]), mix(a[1], b[1])];
       p.armL = mixJ(rig.from.armL, to.armL);
@@ -100,6 +101,7 @@ export function poseAt(actor: Actor, t: number, duration: number, seed0: string,
       p.headTilt = mix(rig.from.head, to.head);
       p.lean = mix(rig.from.lean, to.lean);
       p.crouch = mix(rig.from.crouch, to.crouch);
+      p.dy = -mix(rig.from.lift ?? 0, to.lift ?? 0) * 300;
       break;
     }
     case 'nod': {

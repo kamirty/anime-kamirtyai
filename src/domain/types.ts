@@ -58,7 +58,7 @@ export interface Actor {
   /** Walk destination (only for walk). */
   to?: number;
   /** Hand-posed joints for the custom action: a start pose and an optional end pose. */
-  rig?: { from: RigPose; to?: RigPose };
+  rig?: { from: RigPose; to?: RigPose; /** Seconds per back-and-forth cycle; the body then loops between the two poses. */ loop?: number };
 }
 
 /** [upper angle from straight down (positive = outward/up), bend at the elbow or knee], radians. */
@@ -75,6 +75,8 @@ export interface RigPose {
   lean: number;
   /** 0 standing … 1 deep crouch */
   crouch: number;
+  /** 0 on the ground … 1 a high hop */
+  lift?: number;
 }
 
 export const REST_RIG: RigPose = { armL: [0.12, 0.06], armR: [0.12, 0.06], legL: [0.04, 0], legR: [0.04, 0], head: 0, lean: 0, crouch: 0 };
