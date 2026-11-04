@@ -78,8 +78,23 @@ function camera(shot: Shot, actors: ActorFrame[], t: number, dur: number, L: Lay
     }
   }
   const p = clamp(t / Math.max(0.1, dur), 0, 1);
-  if (shot.camera === 'push') z *= 1 + 0.07 * easeInOut(p);
-  if (shot.camera === 'pan') P.x += ((easeInOut(p) - 0.5) * 0.14 * L.W) / z;
+  if (shot.direct) {
+    // director mode: move from one keyframe to the other with the chosen easing
+    const d = shot.direct;
+    const k = d.ease === 'linear' ? p : d.ease === 'in' ? p * p * p : d.ease === 'out' ? 1 - Math.pow(1 - p, 3) : easeInOut(p);
+    z *= d.from.zoom + (d.to.zoom - d.from.zoom) * k;
+    P.x += ((d.from.x + (d.to.x - d.from.x) * k) * L.W) / 2 / z;
+    P.y += ((d.from.y + (d.to.y - d.from.y) * k) * L.H) / 2 / z;
+    if (d.shake) {
+      // a hand-held tremor that changes on twos, like a drawn shake
+      const r = mulberry(Math.floor(t * 12) + 991);
+      P.x += ((r() - 0.5) * 0.018 * L.W) / z;
+      P.y += ((r() - 0.5) * 0.018 * L.H) / z;
+    }
+  } else {
+    if (shot.camera === 'push') z *= 1 + 0.07 * easeInOut(p);
+    if (shot.camera === 'pan') P.x += ((easeInOut(p) - 0.5) * 0.14 * L.W) / z;
+  }
   return { z, P, S };
 }
 
@@ -338,9 +353,19 @@ function drawCracks(ctx: Ctx, target: { x: number; y: number; r: number }, since
 const drawAny = (ctx: Ctx, ch: Character, pose: Pose, paint?: { sil: string; k: number }) =>
   pose.side ? drawCharacterSide(ctx, ch, pose, pose.side, paint) : drawCharacter(ctx, ch, pose, paint);
 
+/** Which layers to draw; everything by default. `background` 'clear' leaves pixels transparent, a colour keys them. */
+export interface LayerSet {
+  bg: boolean;
+  chars: boolean;
+  fx: boolean;
+  text: boolean;
+  background?: 'clear' | string;
+}
+
 export interface RenderOptions {
   /** Skip text and bubbles (thumbnails). */
   noText?: boolean;
+  layers?: LayerSet;
   lipSync?: LipSyncTracks;
 }
 
@@ -354,8 +379,13 @@ export function renderFrame(project: Project, frame: number, ctx: Ctx, out: Size
   ctx.setTransform(base, 0, 0, base, 0, 0);
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = 'source-over';
-  ctx.fillStyle = INK;
-  ctx.fillRect(0, 0, L.W, L.H);
+  const show: LayerSet = opts.layers ?? { bg: true, chars: true, fx: true, text: !opts.noText };
+  const composite = !opts.layers;
+  if (show.background === 'clear') ctx.clearRect(0, 0, L.W, L.H);
+  else {
+    ctx.fillStyle = show.background ?? INK;
+    ctx.fillRect(0, 0, L.W, L.H);
+  }
 
   const castById = new Map(project.cast.map((c) => [c.id, c]));
   const actors: ActorFrame[] = [];
@@ -374,13 +404,14 @@ export function renderFrame(project: Project, frame: number, ctx: Ctx, out: Size
   const world: World = { W: L.W, H: L.H, gY: L.gY, time: shot.place === 'space' ? 'night' : shot.time, t, board: shot.board };
   const cam = camera(shot, actors, t, dur, L);
 
-  for (const layer of LAYERS) {
-    const T = layerTransform(cam, layer.depth, L);
-    ctx.save();
-    ctx.transform(T.zL, 0, 0, T.zL, T.tx, T.ty);
-    drawPlace(ctx, shot.place, layer.id, world);
-    ctx.restore();
-  }
+  if (show.bg)
+    for (const layer of LAYERS) {
+      const T = layerTransform(cam, layer.depth, L);
+      ctx.save();
+      ctx.transform(T.zL, 0, 0, T.zL, T.tx, T.ty);
+      drawPlace(ctx, shot.place, layer.id, world);
+      ctx.restore();
+    }
 
   // target of a power move: the moon or sun outdoors, the top of the frame indoors
   const skyT = layerTransform(cam, LAYERS[0].depth, L);
@@ -393,7 +424,7 @@ export function renderFrame(project: Project, frame: number, ctx: Ctx, out: Size
   const toScreen = (wx: number, wy: number) => ({ x: bodyT.tx + wx * bodyT.zL, y: bodyT.ty + wy * bodyT.zL });
 
   // custom drawings from the assistant
-  if (shot.props?.length) {
+  if (show.chars && shot.props?.length) {
     ctx.save();
     ctx.transform(bodyT.zL, 0, 0, bodyT.zL, bodyT.tx, bodyT.ty);
     for (const pl of shot.props) {
@@ -410,7 +441,9 @@ export function renderFrame(project: Project, frame: number, ctx: Ctx, out: Size
     ctx.transform(bodyT.zL, 0, 0, bodyT.zL, bodyT.tx, bodyT.ty);
     ctx.translate(a.wx, L.gY);
     ctx.scale(L.unit, L.unit);
+    if (!show.chars) ctx.globalAlpha = 0;
     const info = drawAny(ctx, a.ch, a.pr.pose);
+    ctx.globalAlpha = 1;
     ctx.restore();
     const head = toScreen(a.wx, L.gY + info.headTop * L.unit);
     anchors.push(head);
@@ -418,25 +451,27 @@ export function renderFrame(project: Project, frame: number, ctx: Ctx, out: Size
       const hands = info.hands.map(([hx, hy]) => toScreen(a.wx + hx * L.unit, L.gY + hy * L.unit));
       const hand = { x: (hands[0].x + hands[1].x) / 2, y: Math.min(hands[0].y, hands[1].y) };
       const body = toScreen(a.wx, L.gY + (info.headCY + 260) * L.unit);
-      drawPowerFx(ctx, a, cam, L, target, hand, body, t);
+      if (show.fx) drawPowerFx(ctx, a, cam, L, target, hand, body, t);
       if (a.pr.power.phase === 'impact') impact = { a, flash: a.pr.power.flash };
-      if (a.pr.power.phase === 'land') drawCracks(ctx, target, a.pr.power.since, Math.min(L.W, L.H));
+      if (show.fx && a.pr.power.phase === 'land') drawCracks(ctx, target, a.pr.power.since, Math.min(L.W, L.H));
     }
   });
 
   // screen effects
   const seed = hash(shot.id);
-  for (const e of shot.effects) drawEffect(ctx, e, L.W, L.H, t, dur, seed);
-  for (const a of actors) {
-    const ph = a.pr.power?.phase;
-    if (ph === 'launch' || ph === 'rise' || ph === 'release') drawEffect(ctx, 'speedlines', L.W, L.H, t, dur, seed + 3);
+  if (show.fx) {
+    for (const e of shot.effects) drawEffect(ctx, e, L.W, L.H, t, dur, seed);
+    for (const a of actors) {
+      const ph = a.pr.power?.phase;
+      if (ph === 'launch' || ph === 'rise' || ph === 'release') drawEffect(ctx, 'speedlines', L.W, L.H, t, dur, seed + 3);
+    }
   }
-  if (impact) {
+  if (impact && show.fx) {
     const im = impact as { a: ActorFrame; flash: number };
     drawImpactFrame(ctx, project, im.a, im.flash, target, bodyT, L);
   }
 
-  if (!opts.noText) {
+  if (show.text) {
     if (shot.dialogue && anchors[shot.dialogue.actor]) {
       const a = anchors[shot.dialogue.actor];
       drawBubble(ctx, project, shot.dialogue.text, a.x, a.y, t, L);
@@ -444,7 +479,8 @@ export function renderFrame(project: Project, frame: number, ctx: Ctx, out: Size
     drawCaption(ctx, project, shot, t, L);
   }
 
-  // transitions
+  // transitions belong to the finished picture, not to separate layers
+  if (!composite) return;
   const prev = at.index > 0 ? project.shots[at.index - 1] : null;
   if (prev && prev.transition !== 'cut' && t < 0.35) {
     ctx.globalAlpha = 1 - easeOut(t / 0.35);
@@ -469,6 +505,25 @@ export function renderFrame(project: Project, frame: number, ctx: Ctx, out: Size
       ctx.globalAlpha = 1;
     }
   }
+}
+
+/** The character layer's camera at a frame (scale and offset in output pixels), for compositing in an editor. */
+export function cameraAt(project: Project, frame: number, out: Size): { scale: number; x: number; y: number } {
+  const L = layoutFor(project);
+  const at = shotAt(project, frame);
+  const t = at.local / FPS;
+  const dur = at.frames / FPS;
+  const castById = new Map(project.cast.map((c) => [c.id, c]));
+  const actors: ActorFrame[] = [];
+  at.shot.actors.forEach((a, i) => {
+    const ch = castById.get(a.cast);
+    if (!ch) return;
+    const pr = poseAt(a, t, dur, `${at.shot.id}:${i}`, false);
+    actors.push({ ch, pr, wx: pr.x * L.W });
+  });
+  const T = layerTransform(camera(at.shot, actors, t, dur, L), 1, L);
+  const k = out.width / L.W;
+  return { scale: T.zL, x: T.tx * k, y: T.ty * k };
 }
 
 /** Never let one bad frame crash the editor. */

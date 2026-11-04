@@ -588,5 +588,19 @@ a.primary-link { background: var(--ink); color: var(--on-ink); border-color: var
 }
 
 .share { width: 100%; margin-top: 8px; font-weight: 700; }
-a.try-it { display: flex; margin-top: 18px; padding: 12px 14px; font-weight: 700; border: 2px solid var(--rule); background: var(--brand-soft); }
-a.try-it:hover { background: var(--brand); color: var(--on-brand); }
+a.try-it, button.try-it { display: flex; width: 100%; text-align: start; margin-top: 18px; padding: 12px 14px; font-weight: 700; border: 2px solid var(--rule); background: var(--brand-soft); }
+a.try-it:hover, button.try-it:hover { background: var(--brand); color: var(--on-brand); }
+
+.modal.lab-modal { width: min(1200px, 100%); }
+.lab-modal .lab { padding: 12px 0 0; grid-template-columns: 240px minmax(0, 1fr); }
+.lab-modal .lab-nav { top: 0; }
+.footer .footer-lab { color: var(--brand); font-weight: 400; text-decoration: none; }
+.cam-key { border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 10px 10px; margin: 8px 0; display: grid; gap: 4px; }
+.cam-key legend { font-weight: 700; font-size: 0.86rem; padding: 0 4px; }
+.director summary { font-size: 1.02rem; }
+.pose-editor { display: grid; gap: 6px; justify-items: center; }
+.pose-editor canvas { border: 1px solid var(--border); border-radius: var(--radius); touch-action: none; cursor: grab; max-width: 100%; background: #f6f3ee; }
+.pose-editor canvas.dragging { cursor: grabbing; }
+.pose-editor .slider { width: 100%; }
+.rig-editor { display: grid; gap: 6px; margin-top: 6px; }
+@media (max-width: 860px) { .lab-modal .lab { grid-template-columns: minmax(0, 1fr); } }

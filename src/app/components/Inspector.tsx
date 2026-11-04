@@ -23,6 +23,8 @@ import {
 } from '../../domain/types';
 import { DEFAULT_COLORS, newCharacter } from '../../domain/sanitize';
 import { FONTS } from '../../design/fonts';
+import { DirectorPanel } from './DirectorPanel';
+import { RigEditor } from './PoseEditor';
 
 const CHARACTER_PRESETS = [
   { label: 'ولد عُماني', kind: 'boy', outfit: 'dishdasha', color: '#f6f3ee', accent: '#0b8a3c' },
@@ -176,6 +178,9 @@ export function Inspector({ project, index, onShot, onProject, onMove, onDuplica
                 <input type="range" min={0.05} max={0.95} step={0.01} value={a.to ?? 0.7} onChange={(e) => setActor(i, { to: Number(e.target.value) })} />
               </label>
             )}
+            {a.action === 'custom' && project.cast.find((c) => c.id === a.cast) && (
+              <RigEditor ch={project.cast.find((c) => c.id === a.cast)!} rig={a.rig} onChange={(rig) => setActor(i, { rig })} />
+            )}
           </div>
         ))}
         {shot.actors.length < MAX_ACTORS_PER_SHOT && project.cast.length > 0 && (
@@ -228,6 +233,8 @@ export function Inspector({ project, index, onShot, onProject, onMove, onDuplica
       </div>
       <label className="label">الانتقال إلى اللقطة التالية</label>
       <Seg items={TRANSITIONS} value={shot.transition} onChange={(transition) => onShot({ transition })} />
+
+      <DirectorPanel shot={shot} onShot={onShot} />
 
       <details className="group" open>
         <summary>الشخصيات ({project.cast.length})</summary>

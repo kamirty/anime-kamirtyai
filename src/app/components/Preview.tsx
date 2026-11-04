@@ -4,6 +4,7 @@ import { fmtTime, totalFrames } from '../../domain/timeline';
 import { renderFrameSafe } from '../../engine/renderer/renderFrame';
 import type { LipSyncTracks } from '../../engine/audio/lipsync';
 import { downloadBlob, safeName } from '../../storage/projectFile';
+import { downloadFrameLayers } from './LayerExports';
 
 interface Props {
   project: Project;
@@ -54,6 +55,7 @@ export function Preview({ project, frame, playing, preparing, ready, renderKey, 
         </button>
         <input type="range" min={0} max={Math.max(0, total - 1)} value={Math.min(frame, total - 1)} onChange={(e) => onFrame(Number(e.target.value))} aria-label="موضع المعاينة" />
         <button type="button" onClick={saveFrame} disabled={!ready} title="تنزيل الإطار الحالي كصورة PNG" aria-label="حفظ الإطار صورة PNG">📷 صورة</button>
+        <button type="button" onClick={() => void downloadFrameLayers(project, Math.min(frame, total - 1), lipSync)} disabled={!ready} title="تنزيل الإطار الحالي طبقات PNG شفافة منفصلة (خلفية، شخصيات، مؤثرات، نصوص)" aria-label="حفظ طبقات الإطار">🗂 طبقات</button>
         <span className="time" dir="ltr">
           {fmtTime(frame / FPS)} / {fmtTime(total / FPS)}
         </span>

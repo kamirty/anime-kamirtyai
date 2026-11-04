@@ -29,6 +29,8 @@ import {
   type PropMotion,
   type PropPlacement,
   type Shot,
+  type RigPose,
+  REST_RIG,
 } from './types';
 import { FONT_IDS, DEFAULT_FONT } from '../design/fonts';
 
@@ -115,6 +117,26 @@ export function fixCharacter(v: unknown, i: number): Character | null {
   };
 }
 
+const PI = Math.PI;
+const joint = (v: unknown, d: [number, number]): [number, number] =>
+  Array.isArray(v) && v.length === 2 ? [num(v[0], -PI, PI, d[0]), num(v[1], -PI, PI, d[1])] : d;
+
+export function fixRig(v: unknown): RigPose | null {
+  if (!isObj(v)) return null;
+  return {
+    armL: joint(v.armL, REST_RIG.armL),
+    armR: joint(v.armR, REST_RIG.armR),
+    legL: joint(v.legL, REST_RIG.legL),
+    legR: joint(v.legR, REST_RIG.legR),
+    head: num(v.head, -0.6, 0.6, 0),
+    lean: num(v.lean, -0.5, 0.5, 0),
+    crouch: num(v.crouch, 0, 1, 0),
+  };
+}
+
+const camKey = (v: unknown, d: { zoom: number; x: number; y: number }) =>
+  isObj(v) ? { zoom: num(v.zoom, 1, 3, d.zoom), x: num(v.x, -1, 1, d.x), y: num(v.y, -1, 1, d.y) } : d;
+
 function fixActor(v: unknown, castIds: string[]): Actor | null {
   if (!isObj(v)) return null;
   const cast = typeof v.cast === 'string' && castIds.includes(v.cast) ? v.cast : null;
@@ -122,6 +144,10 @@ function fixActor(v: unknown, castIds: string[]): Actor | null {
   const action = oneOf<ActionId>(v.action, ACTIONS, 'stand');
   const a: Actor = { cast, action, expression: oneOf(v.expression, EXPRESSIONS, 'calm'), x: num(v.x, 0.05, 0.95, 0.5) };
   if (action === 'walk' || action === 'run') a.to = num(v.to, 0.05, 0.95, a.x < 0.5 ? 0.7 : 0.3);
+  if (isObj(v.rig)) {
+    const from = fixRig(v.rig.from);
+    if (from) a.rig = { from, to: fixRig(v.rig.to) ?? undefined };
+  }
   return a;
 }
 
@@ -183,6 +209,10 @@ function fixShot(v: unknown, i: number, castIds: string[], propIds: string[]): S
   }
   const board = str(v.board, 60);
   if (board) shot.board = board;
+  if (isObj(v.direct)) {
+    const ease = (['inout', 'in', 'out', 'linear'] as const).find((e) => e === (v.direct as Obj).ease) ?? 'inout';
+    shot.direct = { from: camKey(v.direct.from, { zoom: 1, x: 0, y: 0 }), to: camKey(v.direct.to, { zoom: 1.3, x: 0, y: 0 }), ease, shake: v.direct.shake === true || undefined };
+  }
   if (Array.isArray(v.props)) {
     const props = v.props.map((p) => fixPlacement(p, propIds)).filter((p): p is PropPlacement => p !== null).slice(0, 6);
     if (props.length) shot.props = props;

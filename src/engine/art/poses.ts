@@ -1,6 +1,6 @@
 import type { Actor, Expression } from '../../domain/types';
 import { restPose, type Pose } from './body';
-import { clamp, easeOut, hash, onTwos } from './paint';
+import { clamp, easeInOut, easeOut, hash, onTwos } from './paint';
 
 /**
  * Actions as drawings over time. Acting is on twos (each drawing held 2 frames), holds are real holds,
@@ -83,6 +83,23 @@ export function poseAt(actor: Actor, t: number, duration: number, seed0: string,
       p.armR = [cyc % 2 ? 2.8 : 1.9, 0.2];
       p.hem = cyc % 2 ? 0.3 : -0.3;
       if (actor.expression === 'calm') p.expression = 'happy';
+      break;
+    }
+    case 'custom': {
+      // hand-posed joints; with an end pose the body moves there on twos, then holds
+      const rig = actor.rig;
+      if (!rig) break;
+      const to = rig.to ?? rig.from;
+      const k = easeInOut(clamp(tq / Math.max(0.3, duration * 0.6), 0, 1));
+      const mix = (a: number, b: number) => a + (b - a) * k;
+      const mixJ = (a: [number, number], b: [number, number]): [number, number] => [mix(a[0], b[0]), mix(a[1], b[1])];
+      p.armL = mixJ(rig.from.armL, to.armL);
+      p.armR = mixJ(rig.from.armR, to.armR);
+      p.legL = mixJ(rig.from.legL, to.legL);
+      p.legR = mixJ(rig.from.legR, to.legR);
+      p.headTilt = mix(rig.from.head, to.head);
+      p.lean = mix(rig.from.lean, to.lean);
+      p.crouch = mix(rig.from.crouch, to.crouch);
       break;
     }
     case 'nod': {

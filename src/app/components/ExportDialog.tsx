@@ -4,6 +4,7 @@ import { fmtTime, totalFrames } from '../../domain/timeline';
 import { detectExportPlan, type DetectResult } from '../../engine/export/capabilities';
 import type { VerifyReport } from '../../engine/export/verify';
 import { downloadBlob, safeName } from '../../storage/projectFile';
+import { LayerExports } from './LayerExports';
 import { ExtraExports } from './ExtraExports';
 import type { LipSyncTracks } from '../../engine/audio/lipsync';
 
@@ -131,6 +132,7 @@ export function ExportDialog({ project, getAudio, lipSync, onClose }: Props) {
         {state.status === 'cancelled' && <div className="alert">أُلغي التصدير.</div>}
         {state.status === 'error' && <div className="alert error">تعذّر التصدير: {state.message}</div>}
         <ExtraExports project={project} disabled={running} />
+        <LayerExports project={project} lipSync={lipSync} disabled={running} />
         {state.status === 'done' && (
           <div className="result">
             <video src={state.url} controls playsInline />

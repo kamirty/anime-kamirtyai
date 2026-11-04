@@ -12,6 +12,7 @@ import { clearTextCache } from '../engine/renderer/textLayout';
 import { downloadBlob, loadLocal, projectBlob, readProjectFile, safeName, saveLocal } from '../storage/projectFile';
 import { EXAMPLES } from './examples';
 import { Sidebar } from './components/Sidebar';
+import { MotionLab } from './components/MotionLab';
 import { Preview } from './components/Preview';
 import { Timeline } from './components/Timeline';
 import { Inspector } from './components/Inspector';
@@ -88,6 +89,7 @@ export function App() {
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [tourOpen, setTourOpen] = useState(false);
   const [mode, setMode] = useState<'simple' | 'pro'>(initialMode);
+  const [labOpen, setLabOpen] = useState(false);
   const [theme, setTheme] = useUiTheme();
   const player = useRef(new PreviewAudio());
   const raf = useRef(0);
@@ -245,9 +247,9 @@ export function App() {
         </a>
         <input className="title-input" value={project.title} maxLength={80} onChange={(e) => setProject((p) => ({ ...p, title: e.target.value }), false)} aria-label="اسم المشروع" />
         <div className="actions">
-          <a className="button" href="/lab/" title="دروس تفاعلية في مبادئ تحريك الأنمي">
-            مختبر الحركة
-          </a>
+          <button type="button" onClick={() => (stop(), setLabOpen(true))} title="دروس تفاعلية في مبادئ تحريك الأنمي">
+            🎓 مختبر الحركة
+          </button>
           <button type="button" onClick={() => setTourOpen(true)}>❔ دليل</button>
           <button type="button" onClick={() => setLibraryOpen(true)}>مشاريعي</button>
           <button type="button" onClick={undo} disabled={!past.length} title="تراجع (Ctrl+Z)">
@@ -411,7 +413,9 @@ export function App() {
         </div>
         <p className="footer-note">كل شيء يعمل داخل متصفحك: لا نرفع وصفك أو ملفاتك أو فيديوهاتك إلى أي خادم. الرسوم والأصوات مولّدة بالكود، والفيديو ملكك دون أي شعار.</p>
         <nav className="footer-links">
-          <a href="/lab/">مختبر الحركة</a>
+          <button type="button" className="linklike footer-lab" onClick={() => setLabOpen(true)}>
+            مختبر الحركة
+          </button>
           <span>·</span>
           <a href="https://motion.kamirtyai.com/">مولّد الموشن</a>
           <span>·</span>
@@ -422,6 +426,16 @@ export function App() {
       {tourOpen && <GuidedTour onClose={() => setTourOpen(false)} />}
       {libraryOpen && <LibraryDialog project={project} description={description} onClose={() => setLibraryOpen(false)} onLoad={(p, d) => { setDescription(d); loadProject(p, 'تم فتح مشروعك المحفوظ.'); }} />}
       {exporting && <ExportDialog project={project} getAudio={getAudio} lipSync={lipSync} onClose={() => setExporting(false)} />}
+      {labOpen && (
+        <MotionLab
+          onClose={() => setLabOpen(false)}
+          onTry={(text) => {
+            setLabOpen(false);
+            setDescription(text);
+            loadProject(describeToProject(text).project, 'طبّقت الدرس على مشهد جديد. شغّله ▶ ولاحظ المبدأ.');
+          }}
+        />
+      )}
     </div>
   );
 }

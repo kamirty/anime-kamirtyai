@@ -28,7 +28,7 @@ export type CameraMove = 'still' | 'push' | 'pan';
 export type Transition = 'cut' | 'dip' | 'flash';
 export type CharKind = 'boy' | 'girl' | 'man' | 'woman';
 export type OutfitId = 'dishdasha' | 'massar' | 'ghutra' | 'abaya' | 'omaniDress' | 'school' | 'casual' | 'labcoat';
-export type ActionId = 'stand' | 'walk' | 'run' | 'dance' | 'nod' | 'wave' | 'talk' | 'point' | 'cheer' | 'jump' | 'think' | 'greet' | 'clap' | 'power';
+export type ActionId = 'custom' | 'stand' | 'walk' | 'run' | 'dance' | 'nod' | 'wave' | 'talk' | 'point' | 'cheer' | 'jump' | 'think' | 'greet' | 'clap' | 'power';
 export type Expression = 'calm' | 'happy' | 'set' | 'surprised' | 'sad' | 'look' | 'amazed' | 'embarrassed' | 'angry' | 'shy' | 'gloom';
 export type EffectId = 'fireworks' | 'confetti' | 'rain' | 'sparkles' | 'speedlines' | 'ribbons' | 'balloons' | 'dust' | 'shootingStars';
 export type MusicId = 'none' | 'calm' | 'festive' | 'epic';
@@ -57,6 +57,43 @@ export interface Actor {
   x: number;
   /** Walk destination (only for walk). */
   to?: number;
+  /** Hand-posed joints for the custom action: a start pose and an optional end pose. */
+  rig?: { from: RigPose; to?: RigPose };
+}
+
+/** [upper angle from straight down (positive = outward/up), bend at the elbow or knee], radians. */
+export type Joint = [number, number];
+
+export interface RigPose {
+  armL: Joint;
+  armR: Joint;
+  legL: Joint;
+  legR: Joint;
+  /** Head tilt, radians. */
+  head: number;
+  /** Body lean, radians. */
+  lean: number;
+  /** 0 standing … 1 deep crouch */
+  crouch: number;
+}
+
+export const REST_RIG: RigPose = { armL: [0.12, 0.06], armR: [0.12, 0.06], legL: [0.04, 0], legR: [0.04, 0], head: 0, lean: 0, crouch: 0 };
+
+/** One camera keyframe: zoom relative to the shot's framing (1–3) and offset as a fraction of half the frame (−1…1). */
+export interface CamKey {
+  zoom: number;
+  x: number;
+  y: number;
+}
+
+export type CamEase = 'inout' | 'in' | 'out' | 'linear';
+
+/** Director mode: the camera moves from one keyframe to another across the shot. */
+export interface DirectorCam {
+  from: CamKey;
+  to: CamKey;
+  ease: CamEase;
+  shake?: boolean;
 }
 
 export interface ShotText {
@@ -94,6 +131,8 @@ export interface Shot {
   props?: PropPlacement[];
   /** Words written on the classroom board. */
   board?: string;
+  /** Director mode camera keyframes. */
+  direct?: DirectorCam;
   /** How this shot hands over to the next one. */
   transition: Transition;
 }
@@ -187,6 +226,7 @@ export const OUTFITS: { id: OutfitId; label: string; for: 'male' | 'female' | 'b
 ];
 
 export const ACTIONS: { id: ActionId; label: string; minSeconds?: number }[] = [
+  { id: 'custom', label: 'وضعية مخصصة (حرّك المفاصل بيدك)' },
   { id: 'stand', label: 'يقف' },
   { id: 'walk', label: 'يمشي' },
   { id: 'run', label: 'يركض' },
