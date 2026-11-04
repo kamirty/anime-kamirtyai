@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FPS, type Project, type Shot } from '../domain/types';
+import { ASPECTS, FPS, MAX_TOTAL_SECONDS, type Project, type Shot } from '../domain/types';
 import { shotAt, shotStarts, totalFrames } from '../domain/timeline';
 import { newShot } from '../domain/sanitize';
 import { ensureFontLoaded } from '../design/fonts';
 import { describeToProject } from '../engine/parser/describe';
 import { buildSoundtrack, toAudioBuffer } from '../engine/audio/soundtrack';
 import { PreviewAudio } from '../engine/audio/player';
+import type { SceneVoices } from '../engine/audio/soundtrack';
+import { createLipSync } from '../engine/audio/lipsync';
 import { clearTextCache } from '../engine/renderer/textLayout';
 import { downloadBlob, loadLocal, projectBlob, readProjectFile, safeName, saveLocal } from '../storage/projectFile';
 import { EXAMPLES } from './examples';
@@ -15,6 +17,9 @@ import { Timeline } from './components/Timeline';
 import { Inspector } from './components/Inspector';
 import { ExportDialog } from './components/ExportDialog';
 import { ThemeToggle, useUiTheme } from './theme';
+import { LibraryDialog } from './components/LibraryDialog';
+import { VoiceRecorder } from './components/VoiceRecorder';
+import { GuidedTour } from './components/GuidedTour';
 
 function initial(): { project: Project; description: string } {
   const saved = loadLocal();
@@ -25,11 +30,17 @@ function initial(): { project: Project; description: string } {
 
 type UserMusic = { name: string; L: Float32Array; R: Float32Array };
 
+function initialMode(): 'simple' | 'pro' {
+  try { return localStorage.getItem('kamirty-anime:editor-mode') === 'pro' ? 'pro' : 'simple'; }
+  catch { return 'simple'; }
+}
+
 async function decodeMusic(file: File): Promise<UserMusic> {
   if (file.size > 40 * 1024 * 1024) throw new Error('الملف الصوتي أكبر من 40 ميجابايت.');
   const data = await file.arrayBuffer();
   const ctx = new OfflineAudioContext(2, 48000, 48000);
   const buf = await ctx.decodeAudioData(data);
+  if (buf.duration > MAX_TOTAL_SECONDS + 5) throw new Error('الملف الصوتي أطول من دقيقتين. قصّه قبل إضافته.');
   const off = new OfflineAudioContext(2, Math.ceil(buf.duration * 48000), 48000);
   const src = off.createBufferSource();
   src.buffer = buf;
@@ -54,13 +65,18 @@ export function App() {
   const [exporting, setExporting] = useState(false);
   const [notice, setNotice] = useState<{ text: string; error?: boolean } | null>(null);
   const [music, setMusic] = useState<UserMusic | null>(null);
+  const [voices, setVoices] = useState<SceneVoices>({});
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [tourOpen, setTourOpen] = useState(false);
+  const [mode, setMode] = useState<'simple' | 'pro'>(initialMode);
   const [theme, setTheme] = useUiTheme();
   const player = useRef(new PreviewAudio());
   const raf = useRef(0);
-  const audioCache = useRef<{ key: string; buf: AudioBuffer } | null>(null);
+  const audioCache = useRef<{ key: string; music: UserMusic | null; voices: SceneVoices; buf: AudioBuffer } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const total = totalFrames(project);
+  const lipSync = useMemo(() => createLipSync(voices), [voices]);
 
   const setProject = useCallback((next: Project | ((p: Project) => Project), record = true) => {
     setProjectRaw((prev) => {
@@ -82,6 +98,10 @@ export function App() {
   }, [project.font]);
 
   useEffect(() => {
+    try { localStorage.setItem('kamirty-anime:editor-mode', mode); } catch { /* optional preference */ }
+  }, [mode]);
+
+  useEffect(() => {
     const id = setTimeout(() => saveLocal(project, description), 400);
     return () => clearTimeout(id);
   }, [project, description]);
@@ -92,14 +112,15 @@ export function App() {
   }, [project, selected, frame, total]);
 
   const getAudio = useCallback(async (): Promise<AudioBuffer | null> => {
-    const key = JSON.stringify([project.shots, project.audio, project.fadeOut, music?.name ?? '']);
-    if (audioCache.current?.key === key) return audioCache.current.buf;
-    if (!project.audio.sfx && !project.audio.ambience && project.audio.music === 'none' && !music) return null;
+    const key = JSON.stringify([project.shots, project.audio, project.fadeOut]);
+    const cached = audioCache.current;
+    if (cached?.key === key && cached.music === music && cached.voices === voices) return cached.buf;
+    if (!project.audio.sfx && !project.audio.ambience && project.audio.music === 'none' && !music && !Object.keys(voices).length) return null;
     await new Promise((r) => setTimeout(r, 20));
-    const buf = toAudioBuffer(buildSoundtrack(project, music));
-    audioCache.current = { key, buf };
+    const buf = toAudioBuffer(buildSoundtrack(project, music, voices));
+    audioCache.current = { key, music, voices, buf };
     return buf;
-  }, [project, music]);
+  }, [project, music, voices]);
 
   const stop = useCallback(() => {
     cancelAnimationFrame(raf.current);
@@ -175,6 +196,9 @@ export function App() {
   const loadProject = (p: Project, note?: string) => {
     stop();
     setProject(p);
+    setVoices({});
+    setMusic(null);
+    audioCache.current = null;
     setSelected(0);
     setFrame(0);
     setNotice(note ? { text: note } : null);
@@ -183,7 +207,7 @@ export function App() {
   const patchShot = (patch: Partial<Shot>) => setProject((p) => ({ ...p, shots: p.shots.map((s, i) => (i === selected ? { ...s, ...patch } : s)) }));
 
   return (
-    <div className="app">
+    <div className={`app mode-${mode}`}>
       <div className="ticker">
         <span className="ticker-label">جديد</span>
         <span className="ticker-text">اكتب مشهدك بالعربية… وحوّله إلى أنمي متحرك بصوت ومؤثرات، مجانًا وداخل متصفحك</span>
@@ -202,6 +226,8 @@ export function App() {
         </a>
         <input className="title-input" value={project.title} maxLength={80} onChange={(e) => setProject((p) => ({ ...p, title: e.target.value }), false)} aria-label="اسم المشروع" />
         <div className="actions">
+          <button type="button" onClick={() => setTourOpen(true)}>❔ دليل</button>
+          <button type="button" onClick={() => setLibraryOpen(true)}>مشاريعي</button>
           <button type="button" onClick={undo} disabled={!past.length} title="تراجع (Ctrl+Z)">
             ↶ تراجع
           </button>
@@ -253,9 +279,18 @@ export function App() {
       )}
 
       <main className="workspace">
-        <Sidebar description={description} aspect={project.aspect} font={project.font} onDescription={setDescription} onProject={(p, note) => loadProject(p, note)} />
+        <Sidebar description={description} aspect={project.aspect} font={project.font} mode={mode} onMode={setMode} onDescription={setDescription} onProject={(p, note) => loadProject(p, note)} />
         <div className="center">
-          <Preview project={project} frame={frame} playing={playing} preparing={preparing} ready={ready} renderKey={renderKey} onFrame={(f) => (stop(), setFrame(f))} onTogglePlay={togglePlay} />
+          {mode === 'simple' && (
+            <section className="box quick-settings">
+              <label htmlFor="quick-aspect">مقاس الفيديو</label>
+              <select id="quick-aspect" value={project.aspect} onChange={(e) => setProject((p) => ({ ...p, aspect: e.target.value as Project['aspect'] }))}>
+                {Object.entries(ASPECTS).map(([id, a]) => <option key={id} value={id}>{a.label}</option>)}
+              </select>
+              <span className="small muted">للمزيد من الحركات والشخصيات والأزياء انتقل إلى «احترافي».</span>
+            </section>
+          )}
+          <Preview project={project} frame={frame} playing={playing} preparing={preparing} ready={ready} renderKey={renderKey} lipSync={lipSync} onFrame={(f) => (stop(), setFrame(f))} onTogglePlay={togglePlay} />
           <Timeline
             project={project}
             selected={selected}
@@ -266,6 +301,24 @@ export function App() {
               const last = project.shots[project.shots.length - 1];
               setProject((p) => ({ ...p, shots: [...p.shots, newShot({ place: last.place, time: last.time, actors: last.actors.map((a) => ({ ...a, action: 'stand' })) })] }));
               setSelected(project.shots.length);
+            }}
+          />
+          <VoiceRecorder
+            key={project.shots[selected]?.id ?? 'no-shot'}
+            shotLabel={`اللقطة ${selected + 1}`}
+            hasVoice={!!voices[project.shots[selected]?.id]}
+            onClip={async (file) => {
+              const decoded = await decodeMusic(file);
+              const shotId = project.shots[selected]?.id;
+              if (shotId) setVoices((prev) => ({ ...prev, [shotId]: { L: decoded.L, R: decoded.R } }));
+            }}
+            onRemove={() => {
+              const id = project.shots[selected]?.id;
+              setVoices((prev) => {
+                const next = { ...prev };
+                delete next[id];
+                return next;
+              });
             }}
           />
           <section className="box music-box">
@@ -321,6 +374,8 @@ export function App() {
             setSelected(selected + 1);
           }}
           onDelete={() => {
+            const shotId = project.shots[selected]?.id;
+            setVoices((prev) => { const next = { ...prev }; delete next[shotId]; return next; });
             setProject((p) => ({ ...p, shots: p.shots.filter((_, i) => i !== selected) }));
             setSelected(Math.max(0, selected - 1));
           }}
@@ -340,7 +395,9 @@ export function App() {
         </nav>
       </footer>
 
-      {exporting && <ExportDialog project={project} getAudio={getAudio} onClose={() => setExporting(false)} />}
+      {tourOpen && <GuidedTour onClose={() => setTourOpen(false)} />}
+      {libraryOpen && <LibraryDialog project={project} description={description} onClose={() => setLibraryOpen(false)} onLoad={(p, d) => { setDescription(d); loadProject(p, 'تم فتح مشروعك المحفوظ.'); }} />}
+      {exporting && <ExportDialog project={project} getAudio={getAudio} lipSync={lipSync} onClose={() => setExporting(false)} />}
     </div>
   );
 }

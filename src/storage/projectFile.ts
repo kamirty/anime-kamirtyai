@@ -25,11 +25,11 @@ export async function readProjectFile(file: File): Promise<Project> {
   return parseProject(data);
 }
 
-const KEY = 'kamirty-anime:autosave:v1';
+export const AUTOSAVE_KEY = 'kamirty-anime:autosave:v1';
 
 export function saveLocal(project: Project, description: string): void {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ project, description }));
+    localStorage.setItem(AUTOSAVE_KEY, JSON.stringify({ project, description }));
   } catch {
     /* best effort */
   }
@@ -37,7 +37,7 @@ export function saveLocal(project: Project, description: string): void {
 
 export function loadLocal(): { project: Project; description: string } | null {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(AUTOSAVE_KEY);
     if (!raw) return null;
     const d = JSON.parse(raw) as { project: unknown; description: unknown };
     return { project: parseProject(d.project), description: typeof d.description === 'string' ? d.description : '' };

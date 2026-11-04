@@ -504,3 +504,55 @@ a.button:hover { border-color: var(--rule); }
 .group summary { font-weight: 700; cursor: pointer; padding: 4px 0; }
 .music-box { display: grid; gap: 4px; }
 .music-box .upload { margin-top: 0; flex: 1; }
+
+
+/* Anime usability: beginner-friendly editing and locally saved projects. */
+.editor-modes { display: flex; border: 1px solid var(--rule); border-radius: 999px; overflow: hidden; }
+.editor-modes button { border: 0; border-radius: 0; padding: 5px 10px; }
+.editor-modes button.active { background: var(--ink); color: var(--on-ink); font-weight: 700; }
+.app.mode-simple .workspace { grid-template-columns: minmax(280px, 380px) minmax(0, 1fr); }
+.app.mode-simple .inspector { display: none; }
+.quick-settings { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.quick-settings select { width: auto; min-width: 145px; }
+.quick-settings span { flex: 1 1 170px; }
+.voice-recorder { display: grid; gap: 6px; }
+.voice-recorder p { margin: 0 0 4px; }
+.recording-status { color: var(--danger); font-weight: 700; }
+.library-dialog { width: min(720px, 96vw); max-height: min(85vh, 800px); overflow: auto; }
+.library-entries { display: grid; gap: 8px; margin-top: 14px; }
+.library-item { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; }
+.library-info { display: grid; gap: 0; min-width: 160px; flex: 1; }
+.library-info small { font-size: 0.76rem; }
+.welcome-guide { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; background: var(--panel-2); }
+.welcome-guide summary { font-weight: 700; cursor: pointer; }
+.welcome-guide ol { padding-inline-start: 20px; margin: 7px 0; }
+.welcome-guide p { margin: 0; }
+@media (max-width: 860px) {
+  .app.mode-simple .workspace { grid-template-columns: minmax(0, 1fr); }
+  .app.mode-simple .sidebar { order: 1; }
+  .app.mode-simple .center { order: 2; }
+  .app.mode-pro .sidebar { order: 2; }
+  .app.mode-pro .center { order: 1; }
+  .app.mode-pro .inspector { order: 3; }
+  .editor-modes button { padding-inline: 8px; }
+  .voice-recorder .row { flex-wrap: wrap; }
+}
+
+
+/* Character workshop and extra export formats. */
+.character-preview { display: block; max-width: 100%; height: auto; margin-inline: auto; border-radius: 8px; border: 1px solid var(--border); }
+.character-presets { display: flex; flex-wrap: wrap; gap: 5px; }
+.character-presets button { border-radius: 999px; font-size: 0.74rem; padding: 3px 8px; background: var(--panel); }
+.extra-exports { display: grid; gap: 5px; margin-top: 16px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); }
+.extra-exports h3 { margin: 0; font-size: 0.95rem; }
+.extra-exports p { margin: 0 0 5px; }
+
+.guided-tour { width: min(620px, 96vw); }
+.guide-step { min-height: 130px; padding: 16px; background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--radius); }
+.guide-step h3 { margin: 0 0 10px; }
+.guide-step p { margin: 0; }
+
+/* Prevent the sticky header from covering its own controls after scrolling
+   the editor on desktop or small screens. The preview remains sticky. */
+.topbar { position: relative; top: auto; }
+.center { top: 12px; }

@@ -45,7 +45,7 @@ function gazeFor(e: Expression, seed: number): { x: number; y: number } {
   return { x: (seed % 2 ? 1 : -1) * 6, y: -6 };
 }
 
-export function poseAt(actor: Actor, t: number, duration: number, seed0: string, speaking: boolean): PoseResult {
+export function poseAt(actor: Actor, t: number, duration: number, seed0: string, speaking: boolean, mouthOpen?: boolean): PoseResult {
   const seed = hash(seed0);
   const tq = onTwos(t);
   const p = restPose(actor.expression);
@@ -77,6 +77,43 @@ export function poseAt(actor: Actor, t: number, duration: number, seed0: string,
         p.lean = side * 0.03;
         p.gaze = { x: side * 10, y: 0 };
       }
+      break;
+    }
+    case 'run': {
+      const to = actor.to ?? (actor.x < 0.5 ? 0.85 : 0.15);
+      const travel = clamp(tq / Math.max(0.4, duration - 0.3), 0, 1);
+      x = actor.x + (to - actor.x) * travel;
+      if (travel < 1) {
+        const cyc = Math.floor(t * 24 / 3) % 4;
+        const side = to > actor.x ? 1 : -1;
+        const a = cyc === 0 ? 1 : cyc === 2 ? -1 : 0;
+        p.dy = cyc % 2 ? -36 : 0;
+        p.lean = side * 0.14;
+        p.feet = [a * 70 * side, -a * 70 * side, cyc === 1 ? 32 : 0, cyc === 3 ? 32 : 0];
+        p.legL = [0.2 + a * 0.5, a < 0 ? 0.5 : 0];
+        p.legR = [0.2 - a * 0.5, a > 0 ? 0.5 : 0];
+        p.armL = [0.3 - a * 0.45, 0.8];
+        p.armR = [0.3 + a * 0.45, 0.8];
+        p.hem = a * 0.7;
+        p.gaze = { x: side * 10, y: 0 };
+      }
+      break;
+    }
+    case 'dance': {
+      const cyc = Math.floor(t * 24 / 5) % 4;
+      p.dy = cyc % 2 ? -42 : 0;
+      p.lean = (cyc < 2 ? -1 : 1) * 0.09;
+      p.headTilt = (cyc < 2 ? 1 : -1) * 0.08;
+      p.armL = [cyc % 2 ? 1.9 : 2.8, 0.2];
+      p.armR = [cyc % 2 ? 2.8 : 1.9, 0.2];
+      p.hem = cyc % 2 ? 0.3 : -0.3;
+      if (actor.expression === 'calm') p.expression = 'happy';
+      break;
+    }
+    case 'nod': {
+      const step = Math.floor(t * 24 / 6) % 4;
+      p.headTilt = step === 1 ? 0.11 : step === 3 ? -0.03 : 0;
+      p.gaze = { x: 0, y: step === 1 ? 10 : 0 };
       break;
     }
     case 'wave': {
@@ -179,7 +216,7 @@ export function poseAt(actor: Actor, t: number, duration: number, seed0: string,
   if (speaking) {
     // mouth flaps on twos with a pause every few drawings
     const step = Math.floor((t * 24) / 3);
-    p.mouthOpen = step % 2 === 0 && step % 7 !== 6;
+    p.mouthOpen = mouthOpen ?? (step % 2 === 0 && step % 7 !== 6);
     if (p.expression === 'happy') p.expression = 'look';
     p.gaze = { x: 0, y: 0 };
   }

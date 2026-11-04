@@ -28,7 +28,7 @@ export type CameraMove = 'still' | 'push' | 'pan';
 export type Transition = 'cut' | 'dip' | 'flash';
 export type CharKind = 'boy' | 'girl' | 'man' | 'woman';
 export type OutfitId = 'dishdasha' | 'massar' | 'ghutra' | 'abaya' | 'omaniDress' | 'school' | 'casual' | 'labcoat';
-export type ActionId = 'stand' | 'walk' | 'wave' | 'talk' | 'point' | 'cheer' | 'jump' | 'think' | 'greet' | 'clap' | 'power';
+export type ActionId = 'stand' | 'walk' | 'run' | 'dance' | 'nod' | 'wave' | 'talk' | 'point' | 'cheer' | 'jump' | 'think' | 'greet' | 'clap' | 'power';
 export type Expression = 'calm' | 'happy' | 'set' | 'surprised' | 'sad' | 'look';
 export type EffectId = 'fireworks' | 'confetti' | 'rain' | 'sparkles' | 'speedlines' | 'ribbons' | 'balloons' | 'dust' | 'shootingStars';
 export type MusicId = 'none' | 'calm' | 'festive' | 'epic';
@@ -187,6 +187,9 @@ export const OUTFITS: { id: OutfitId; label: string; for: 'male' | 'female' | 'b
 export const ACTIONS: { id: ActionId; label: string; minSeconds?: number }[] = [
   { id: 'stand', label: 'يقف' },
   { id: 'walk', label: 'يمشي' },
+  { id: 'run', label: 'يركض' },
+  { id: 'dance', label: 'يرقص' },
+  { id: 'nod', label: 'يهزّ رأسه موافقًا' },
   { id: 'wave', label: 'يلوّح' },
   { id: 'talk', label: 'يتكلم' },
   { id: 'point', label: 'يشير' },

@@ -150,12 +150,19 @@ function actionSfx(m: Mixer, shot: Shot, t0: number, dur: number, seed: number) 
   shot.actors.forEach((a, ai) => {
     const pan = (a.x - 0.5) * 1.2;
     switch (a.action) {
-      case 'walk': {
+      case 'walk':
+      case 'run': {
         const hard = shot.place === 'city' || shot.place === 'classroom' || shot.place === 'home';
         const step = cached(`step${hard}`, () => normalize(hard ? bandpass(noise(0.08, 11), 900, 1.2).map((v, i) => v * Math.exp(-i / SR / 0.015)) : lowpass(noise(0.12, 12), 1600).map((v, i) => v * Math.exp(-i / SR / 0.03))));
-        for (let f = 0; f / FPS < Math.max(0.5, dur - 0.6); f += 8) m.add(step, t0 + f / FPS, 0.18, pan);
+        for (let f = 0; f / FPS < Math.max(0.5, dur - 0.6); f += a.action === 'run' ? 5 : 8) m.add(step, t0 + f / FPS, a.action === 'run' ? 0.24 : 0.18, pan);
         break;
       }
+      case 'dance':
+        for (let f = 4; f / FPS < dur; f += 12) m.add(cached('clap', () => clap(4)), t0 + f / FPS, 0.08, pan, 0.15);
+        break;
+      case 'nod':
+        m.add(bell(880, 1), t0 + 0.2, 0.035, pan);
+        break;
       case 'clap':
         for (let f = 0; f / FPS < dur; f += 6) m.add(cached('clap', () => clap(4)), t0 + f / FPS, 0.22, pan, 0.3);
         break;
@@ -284,7 +291,10 @@ function music(m: Mixer, project: Project, total: number) {
   }
 }
 
-export function buildSoundtrack(project: Project, userMusic?: { L: Float32Array; R: Float32Array } | null): Soundtrack {
+export type VoiceClip = { L: Float32Array; R: Float32Array };
+export type SceneVoices = Record<string, VoiceClip>;
+
+export function buildSoundtrack(project: Project, userMusic?: VoiceClip | null, voices: SceneVoices = {}): Soundtrack {
   const total = totalFrames(project) / FPS;
   const m = new Mixer(len(total));
   let t0 = 0;
@@ -312,6 +322,23 @@ export function buildSoundtrack(project: Project, userMusic?: { L: Float32Array;
       m.R[i] += userMusic.R[i] * 0.7 * fade;
     }
   } else music(m, project, total);
+
+  // Recordings are mixed at their shot's start and clipped at its end.
+  // No microphone audio leaves the user's browser.
+  let voiceOffset = 0;
+  for (const shot of project.shots) {
+    const voice = voices[shot.id];
+    const shotSamples = len(shotFrames(shot) / FPS);
+    if (voice) {
+      const count = Math.min(shotSamples, voice.L.length, voice.R.length, m.n - voiceOffset);
+      for (let i = 0; i < count; i++) {
+        const fade = Math.min(1, i / len(0.03), (count - i) / len(0.1));
+        m.L[voiceOffset + i] += voice.L[i] * 0.9 * fade;
+        m.R[voiceOffset + i] += voice.R[i] * 0.9 * fade;
+      }
+    }
+    voiceOffset += shotSamples;
+  }
 
   const [rL, rR] = reverb(m.sL, m.sR);
   const L = m.L;

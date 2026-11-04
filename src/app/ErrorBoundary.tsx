@@ -1,10 +1,9 @@
 import { Component, type ReactNode } from 'react';
+import { AUTOSAVE_KEY } from '../storage/projectFile';
 
 interface State {
   error: Error | null;
 }
-
-const AUTOSAVE_KEY = 'kamirty-motion:autosave:v1';
 
 /**
  * Last-resort screen instead of a blank page. Offers a reload and, if the saved project itself is
@@ -24,7 +23,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
         const url = URL.createObjectURL(new Blob([saved], { type: 'application/json' }));
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'kamirty-motion-backup.json';
+        a.download = 'kamirty-anime-backup.json';
         a.click();
         setTimeout(() => URL.revokeObjectURL(url), 10_000);
       }

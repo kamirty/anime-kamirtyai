@@ -121,7 +121,7 @@ function fixActor(v: unknown, castIds: string[]): Actor | null {
   if (!cast) return null;
   const action = oneOf<ActionId>(v.action, ACTIONS, 'stand');
   const a: Actor = { cast, action, expression: oneOf(v.expression, EXPRESSIONS, 'calm'), x: num(v.x, 0.05, 0.95, 0.5) };
-  if (action === 'walk') a.to = num(v.to, 0.05, 0.95, a.x < 0.5 ? 0.7 : 0.3);
+  if (action === 'walk' || action === 'run') a.to = num(v.to, 0.05, 0.95, a.x < 0.5 ? 0.7 : 0.3);
   return a;
 }
 

@@ -4,6 +4,8 @@ import { fmtTime, totalFrames } from '../../domain/timeline';
 import { detectExportPlan, type DetectResult } from '../../engine/export/capabilities';
 import type { VerifyReport } from '../../engine/export/verify';
 import { downloadBlob, safeName } from '../../storage/projectFile';
+import { ExtraExports } from './ExtraExports';
+import type { LipSyncTracks } from '../../engine/audio/lipsync';
 
 type State =
   | { status: 'idle' }
@@ -16,11 +18,12 @@ type State =
 interface Props {
   project: Project;
   getAudio: () => Promise<AudioBuffer | null>;
+  lipSync?: LipSyncTracks;
   onClose: () => void;
 }
 
-export function ExportDialog({ project, getAudio, onClose }: Props) {
-  const [quality, setQuality] = useState<'sd' | 'hd'>('hd');
+export function ExportDialog({ project, getAudio, lipSync, onClose }: Props) {
+  const [quality, setQuality] = useState<'sd' | 'hd'>(() => window.matchMedia?.('(max-width: 600px)').matches ? 'sd' : 'hd');
   const size = ASPECTS[project.aspect][quality];
   const [cap, setCap] = useState<DetectResult | null>(null);
   const [state, setState] = useState<State>({ status: 'idle' });
@@ -29,7 +32,9 @@ export function ExportDialog({ project, getAudio, onClose }: Props) {
 
   useEffect(() => {
     setCap(null);
-    detectExportPlan(size).then(setCap);
+    let active = true;
+    detectExportPlan(size).then((result) => { if (active) setCap(result); }).catch(() => { if (active) setCap({ supported: false, reason: 'تعذر فحص دعم الفيديو في هذا المتصفح.' }); });
+    return () => { active = false; };
   }, [size.width, size.height]);
   useEffect(() => () => abortRef.current?.abort(), []);
   useEffect(
@@ -50,6 +55,7 @@ export function ExportDialog({ project, getAudio, onClose }: Props) {
       const blob = await exportVideo(project, cap.plan, {
         signal: controller.signal,
         audio,
+        lipSync,
         onProgress: (p) => setState({ status: 'running', frame: p.frame, startedAt, now: performance.now() }),
       });
       const seconds = (performance.now() - startedAt) / 1000;
@@ -124,6 +130,7 @@ export function ExportDialog({ project, getAudio, onClose }: Props) {
         {state.status === 'verifying' && <p>جارٍ التحقق من الملف الناتج…</p>}
         {state.status === 'cancelled' && <div className="alert">أُلغي التصدير.</div>}
         {state.status === 'error' && <div className="alert error">تعذّر التصدير: {state.message}</div>}
+        <ExtraExports project={project} disabled={running} />
         {state.status === 'done' && (
           <div className="result">
             <video src={state.url} controls playsInline />

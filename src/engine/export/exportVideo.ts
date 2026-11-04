@@ -1,6 +1,7 @@
 import { FPS, type Project } from '../../domain/types';
 import { totalFrames } from '../../domain/timeline';
 import { renderFrame } from '../renderer/renderFrame';
+import type { LipSyncTracks } from '../audio/lipsync';
 import type { ExportPlan } from './capabilities';
 
 export interface ExportProgress {
@@ -21,7 +22,7 @@ export class ExportCancelledError extends Error {
 export async function exportVideo(
   project: Project,
   plan: ExportPlan,
-  opts: { signal?: AbortSignal; onProgress?: (p: ExportProgress) => void; audio?: AudioBuffer | null } = {},
+  opts: { signal?: AbortSignal; onProgress?: (p: ExportProgress) => void; audio?: AudioBuffer | null; lipSync?: LipSyncTracks } = {},
 ): Promise<Blob> {
   const mb = await import('mediabunny');
   const { width, height } = plan;
@@ -51,7 +52,7 @@ export async function exportVideo(
     }
     for (let frame = 0; frame < frames; frame++) {
       if (opts.signal?.aborted) throw new ExportCancelledError();
-      renderFrame(project, frame, ctx, size);
+      renderFrame(project, frame, ctx, size, { lipSync: opts.lipSync });
       await video.add(frame / FPS, frameDuration);
       if (frame % 6 === 0 || frame === frames - 1) {
         opts.onProgress?.({ frame: frame + 1, totalFrames: frames });
