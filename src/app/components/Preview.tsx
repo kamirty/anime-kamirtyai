@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { ASPECTS, FPS, type Project } from '../../domain/types';
 import { fmtTime, totalFrames } from '../../domain/timeline';
 import { renderFrameSafe } from '../../engine/renderer/renderFrame';
+import type { LipSyncTracks } from '../../engine/audio/lipsync';
 import { downloadBlob, safeName } from '../../storage/projectFile';
 
 interface Props {
@@ -11,19 +12,20 @@ interface Props {
   preparing: boolean;
   ready: boolean;
   renderKey: number;
+  lipSync?: LipSyncTracks;
   onFrame: (f: number) => void;
   onTogglePlay: () => void;
 }
 
-export function Preview({ project, frame, playing, preparing, ready, renderKey, onFrame, onTogglePlay }: Props) {
+export function Preview({ project, frame, playing, preparing, ready, renderKey, lipSync, onFrame, onTogglePlay }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
   const size = ASPECTS[project.aspect].sd;
   const total = totalFrames(project);
   useEffect(() => {
     const ctx = ref.current?.getContext('2d');
     if (!ctx || !ready) return;
-    renderFrameSafe(project, Math.min(frame, total - 1), ctx, size);
-  }, [project, frame, ready, renderKey, size, total]);
+    renderFrameSafe(project, Math.min(frame, total - 1), ctx, size, { lipSync });
+  }, [project, frame, ready, renderKey, size, total, lipSync]);
 
   const saveFrame = () => {
     const canvas = ref.current;
