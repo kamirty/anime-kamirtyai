@@ -226,10 +226,6 @@ export function App() {
         </a>
         <input className="title-input" value={project.title} maxLength={80} onChange={(e) => setProject((p) => ({ ...p, title: e.target.value }), false)} aria-label="اسم المشروع" />
         <div className="actions">
-          <div className="editor-modes" role="group" aria-label="مستوى المحرر">
-            <button type="button" aria-pressed={mode === 'simple'} className={mode === 'simple' ? 'active' : ''} onClick={() => setMode('simple')}>سهل</button>
-            <button type="button" aria-pressed={mode === 'pro'} className={mode === 'pro' ? 'active' : ''} onClick={() => setMode('pro')}>احترافي</button>
-          </div>
           <button type="button" onClick={() => setTourOpen(true)}>❔ دليل</button>
           <button type="button" onClick={() => setLibraryOpen(true)}>مشاريعي</button>
           <button type="button" onClick={undo} disabled={!past.length} title="تراجع (Ctrl+Z)">
@@ -283,7 +279,7 @@ export function App() {
       )}
 
       <main className="workspace">
-        <Sidebar description={description} aspect={project.aspect} font={project.font} onDescription={setDescription} onProject={(p, note) => loadProject(p, note)} />
+        <Sidebar description={description} aspect={project.aspect} font={project.font} mode={mode} onMode={setMode} onDescription={setDescription} onProject={(p, note) => loadProject(p, note)} />
         <div className="center">
           {mode === 'simple' && (
             <section className="box quick-settings">
