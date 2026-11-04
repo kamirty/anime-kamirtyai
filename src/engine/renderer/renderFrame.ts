@@ -5,6 +5,7 @@ import { drawCharacter, rig } from '../art/body';
 import { drawEffect } from '../art/effects';
 import { INTERIOR, LAYERS, drawPlace, skyBody, type World } from '../art/places';
 import { poseAt, type PoseResult } from '../art/poses';
+import type { LipSyncTracks } from '../audio/lipsync';
 import { INK, LINE, PRACTICAL, RED, type Ctx, clamp, easeInOut, easeOut, hash, mulberry } from '../art/paint';
 import { drawProp } from '../art/props';
 import { fitText } from './textLayout';
@@ -336,6 +337,7 @@ function drawCracks(ctx: Ctx, target: { x: number; y: number; r: number }, since
 export interface RenderOptions {
   /** Skip text and bubbles (thumbnails). */
   noText?: boolean;
+  lipSync?: LipSyncTracks;
 }
 
 export function renderFrame(project: Project, frame: number, ctx: Ctx, out: Size, opts: RenderOptions = {}): void {
@@ -356,7 +358,10 @@ export function renderFrame(project: Project, frame: number, ctx: Ctx, out: Size
   shot.actors.forEach((a, i) => {
     const ch = castById.get(a.cast);
     if (!ch) return;
-    const pr = poseAt(a, t, dur, `${shot.id}:${i}`, shot.dialogue?.actor === i);
+    const voice = opts.lipSync?.[shot.id];
+    const speaker = shot.dialogue?.actor ?? (voice ? 0 : -1);
+    const level = voice?.[at.local] ?? 0;
+    const pr = poseAt(a, t, dur, `${shot.id}:${i}`, speaker === i, voice ? level >= 0.17 : undefined);
     actors.push({ ch, pr, wx: pr.x * L.W });
   });
 
