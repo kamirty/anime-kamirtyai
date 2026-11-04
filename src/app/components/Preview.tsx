@@ -28,9 +28,15 @@ export function Preview({ project, frame, playing, preparing, ready, renderKey, 
   }, [project, frame, ready, renderKey, size, total, lipSync]);
 
   const saveFrame = () => {
-    const canvas = ref.current;
-    if (!canvas || !ready) return;
-    canvas.toBlob((blob) => {
+    if (!ready) return;
+    const hd = ASPECTS[project.aspect].hd;
+    const image = document.createElement('canvas');
+    image.width = hd.width;
+    image.height = hd.height;
+    const ctx = image.getContext('2d');
+    if (!ctx) return;
+    renderFrameSafe(project, Math.min(frame, total - 1), ctx, hd, { lipSync });
+    image.toBlob((blob) => {
       if (blob) downloadBlob(blob, `${safeName(project.title)}-frame-${String(frame + 1).padStart(4, '0')}.png`);
     }, 'image/png');
   };
