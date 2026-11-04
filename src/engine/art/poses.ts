@@ -45,7 +45,7 @@ function gazeFor(e: Expression, seed: number): { x: number; y: number } {
   return { x: (seed % 2 ? 1 : -1) * 6, y: -6 };
 }
 
-export function poseAt(actor: Actor, t: number, duration: number, seed0: string, speaking: boolean): PoseResult {
+export function poseAt(actor: Actor, t: number, duration: number, seed0: string, speaking: boolean, mouthOpen?: boolean): PoseResult {
   const seed = hash(seed0);
   const tq = onTwos(t);
   const p = restPose(actor.expression);
@@ -216,7 +216,7 @@ export function poseAt(actor: Actor, t: number, duration: number, seed0: string,
   if (speaking) {
     // mouth flaps on twos with a pause every few drawings
     const step = Math.floor((t * 24) / 3);
-    p.mouthOpen = step % 2 === 0 && step % 7 !== 6;
+    p.mouthOpen = mouthOpen ?? (step % 2 === 0 && step % 7 !== 6);
     if (p.expression === 'happy') p.expression = 'look';
     p.gaze = { x: 0, y: 0 };
   }
