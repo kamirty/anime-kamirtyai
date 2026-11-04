@@ -24,6 +24,33 @@
   <body>
     <noscript>تحتاج هذه الأداة إلى تفعيل JavaScript.</noscript>
     <div id="root"></div>
+    <script>
+      // If the app never mounts (old browser, blocked script, network error), show why instead of a blank page.
+      (function () {
+        var errs = [];
+        window.addEventListener('error', function (e) { errs.push((e.message || 'تعذّر تحميل ملف') + (e.filename ? ' — ' + e.filename : '') + (e.target && e.target.src ? ' — ' + e.target.src : '')); }, true);
+        window.addEventListener('unhandledrejection', function (e) { errs.push(String(e.reason)); });
+        setTimeout(function () {
+          var root = document.getElementById('root');
+          if (!root || root.children.length) return;
+          var box = document.createElement('div');
+          box.setAttribute('style', 'max-width:640px;margin:10vh auto;padding:24px;font:16px/1.8 Tahoma,sans-serif;border:2px solid #000;border-top-width:8px');
+          var h = document.createElement('h1');
+          h.setAttribute('style', 'font-size:22px;margin:0 0 8px');
+          h.textContent = 'تعذّر تشغيل استوديو الأنمي في هذا المتصفح';
+          var p = document.createElement('p');
+          p.textContent = 'حدّث الصفحة بالضغط على Ctrl+Shift+R. إن بقيت المشكلة فاستخدم أحدث نسخة من Chrome أو Edge، وأرسل لنا النص أدناه.';
+          var pre = document.createElement('pre');
+          pre.setAttribute('dir', 'ltr');
+          pre.setAttribute('style', 'white-space:pre-wrap;background:#f4f4f4;padding:10px;font-size:12px');
+          pre.textContent = (errs.length ? errs.join('\n') : 'no error captured') + '\n' + navigator.userAgent;
+          box.appendChild(h);
+          box.appendChild(p);
+          box.appendChild(pre);
+          document.body.appendChild(box);
+        }, 8000);
+      })();
+    </script>
     <script type="module" src="/src/app/main.tsx"></script>
   </body>
 </html>
