@@ -284,7 +284,10 @@ function music(m: Mixer, project: Project, total: number) {
   }
 }
 
-export function buildSoundtrack(project: Project, userMusic?: { L: Float32Array; R: Float32Array } | null): Soundtrack {
+export type VoiceClip = { L: Float32Array; R: Float32Array };
+export type SceneVoices = Record<string, VoiceClip>;
+
+export function buildSoundtrack(project: Project, userMusic?: VoiceClip | null, voices: SceneVoices = {}): Soundtrack {
   const total = totalFrames(project) / FPS;
   const m = new Mixer(len(total));
   let t0 = 0;
@@ -312,6 +315,23 @@ export function buildSoundtrack(project: Project, userMusic?: { L: Float32Array;
       m.R[i] += userMusic.R[i] * 0.7 * fade;
     }
   } else music(m, project, total);
+
+  // Recordings are mixed at their shot's start and clipped at its end.
+  // No microphone audio leaves the user's browser.
+  let voiceOffset = 0;
+  for (const shot of project.shots) {
+    const voice = voices[shot.id];
+    const shotSamples = len(shotFrames(shot) / FPS);
+    if (voice) {
+      const count = Math.min(shotSamples, voice.L.length, voice.R.length, m.n - voiceOffset);
+      for (let i = 0; i < count; i++) {
+        const fade = Math.min(1, i / len(0.03), (count - i) / len(0.1));
+        m.L[voiceOffset + i] += voice.L[i] * 0.9 * fade;
+        m.R[voiceOffset + i] += voice.R[i] * 0.9 * fade;
+      }
+    }
+    voiceOffset += shotSamples;
+  }
 
   const [rL, rR] = reverb(m.sL, m.sR);
   const L = m.L;
