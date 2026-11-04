@@ -74,7 +74,11 @@ export interface Pose {
   expression: Expression;
   gaze: { x: number; y: number };
   mouthOpen: boolean;
+  /** Lip-sync mouth level (0 closed, 1 half, 2 open). */
+  mouth?: number;
   blink: boolean;
+  /** Side view (walk and run). */
+  side?: { facing: 1 | -1; phase: number; run: boolean };
   /** Energy orb in body units (power move). */
   orb?: { x: number; y: number; r: number };
 }
@@ -97,7 +101,7 @@ export const restPose = (expression: Expression = 'calm'): Pose => ({
   blink: false,
 });
 
-const headwearFor = (ch: Character): Headwear => {
+export const headwearFor = (ch: Character): Headwear => {
   switch (ch.outfit) {
     case 'dishdasha':
       return 'kumma';
@@ -115,7 +119,7 @@ const headwearFor = (ch: Character): Headwear => {
   }
 };
 
-const wearColor = (ch: Character): string => {
+export const wearColor = (ch: Character): string => {
   switch (ch.outfit) {
     case 'dishdasha':
       return '#f6f3ee';
@@ -134,7 +138,7 @@ const wearColor = (ch: Character): string => {
   }
 };
 
-const sleeveColor = (ch: Character): string => {
+export const sleeveColor = (ch: Character): string => {
   if (ch.outfit === 'school') return '#f6f3ee';
   if (ch.outfit === 'labcoat') return '#f8f8f6';
   return ch.color;
@@ -142,7 +146,7 @@ const sleeveColor = (ch: Character): string => {
 
 const dir = (side: -1 | 1, a: number): [number, number] => [side * Math.sin(a), Math.cos(a)];
 
-interface Limb {
+export interface Limb {
   s: [number, number];
   e: [number, number];
   h: [number, number];
@@ -155,7 +159,7 @@ function limb(s: [number, number], side: -1 | 1, ang: [number, number], l1: numb
   return { s, e, h: [e[0] + d2[0] * l2, e[1] + d2[1] * l2] };
 }
 
-function strokeLimb(ctx: Ctx, L: Limb, color: string, width: number, outline: number, paint?: Paint) {
+export function strokeLimb(ctx: Ctx, L: Limb, color: string, width: number, outline: number, paint?: Paint) {
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
   const path = () => {
@@ -176,7 +180,7 @@ function strokeLimb(ctx: Ctx, L: Limb, color: string, width: number, outline: nu
   ctx.stroke();
 }
 
-function circle(ctx: Ctx, x: number, y: number, r: number, color: string, outline: number, paint?: Paint) {
+export function circle(ctx: Ctx, x: number, y: number, r: number, color: string, outline: number, paint?: Paint) {
   ctx.beginPath();
   ctx.arc(x, y, r, 0, Math.PI * 2);
   ctx.fillStyle = paint?.sil ?? color;
@@ -302,7 +306,9 @@ export function drawCharacter(ctx: Ctx, ch: Character, pose: Pose, paint?: Paint
   ctx.save();
   ctx.translate(0, r.headCY + drop);
   ctx.scale(r.k, r.k);
-  drawNeck(ctx, skin, 1, paint);
+  // under a hijab the scarf wraps the neck, so the neck takes the scarf colour
+  const wrapped = headwearFor(ch) === 'hijab' || headwearFor(ch) === 'lihaf';
+  drawNeck(ctx, wrapped ? wearColor(ch) : skin, 1, paint);
   ctx.restore();
 
   // ── garment ──
@@ -409,6 +415,7 @@ export function drawCharacter(ctx: Ctx, ch: Character, pose: Pose, paint?: Paint
     expression: pose.expression,
     gaze: pose.gaze,
     mouthOpen: pose.mouthOpen,
+    mouth: pose.mouth,
     blink: pose.blink,
     paint,
     lw: 1,

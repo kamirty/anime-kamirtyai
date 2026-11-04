@@ -324,14 +324,14 @@ export function describeToProject(description: string, opts: { aspect?: Aspect; 
     if (shot.text) chip({ kind: 'text', label: `عبارة: «${shot.text.main.slice(0, 30)}»` });
     // framing
     const action = actors[0]?.action;
-    shot.size = seg.size ?? (action === 'power' || action === 'walk' || action === 'jump' || actors.length === 0 ? 'wide' : shot.dialogue ? (actors.length > 1 ? 'medium' : 'close') : 'medium');
+    shot.size = seg.size ?? (action === 'power' || action === 'walk' || action === 'run' || action === 'jump' || actors.length === 0 ? 'wide' : shot.dialogue ? (actors.length > 1 ? 'medium' : 'close') : 'medium');
     if (action === 'power') shot.size = 'wide';
     shot.camera = shot.size === 'wide' && !action ? 'push' : shot.size === 'close' ? 'push' : 'still';
     const words = shot.dialogue ? shot.dialogue.text.split(/\s+/).length : 0;
     shot.duration = Math.max(
       3,
       shot.dialogue ? Math.min(8, 1.6 + words * 0.5) : 0,
-      action === 'power' ? 4.5 : action === 'walk' ? 3.5 : action === 'jump' ? 2.5 : 0,
+      action === 'power' ? 4.5 : action === 'walk' ? 3.5 : action === 'run' ? 3 : action === 'jump' ? 2.5 : 0,
       shot.text ? 4 : 0,
     );
     shot.duration = Math.round(shot.duration * 2) / 2;
@@ -384,6 +384,25 @@ export function describeToProject(description: string, opts: { aspect?: Aspect; 
   }
   const last = shots[shots.length - 1];
   if (last.text && last.duration < 4) last.duration = 4;
+
+  // the classroom board shows the lesson topic taken from the scene's own words
+  const classShots = shots.filter((s) => s.place === 'classroom');
+  if (classShots.length) {
+    const said = classShots.flatMap((s) => [s.dialogue?.text, s.text?.main]).filter((x): x is string => !!x);
+    let topic: string | undefined;
+    for (const line of said) {
+      const m = line.match(/(?:نتعلم|سنتعلم|نتعرف على|سنتعرف على|نتعلّم|سنتعلّم|درسنا اليوم|درس اليوم|درسنا|موضوعنا|موضوع اليوم|عنوان الدرس)\s*(?:عن)?\s*[:：]?\s*([^،,.!؟?]{2,40})/);
+      if (m) {
+        topic = m[1].trim();
+        break;
+      }
+    }
+    topic ??= classShots.find((s) => s.text)?.text?.main;
+    if (topic) {
+      for (const s of classShots) s.board ??= topic;
+      chip({ kind: 'text', label: `على السبورة: «${topic.slice(0, 30)}»` });
+    }
+  }
   if (shots.some((s) => s.actors.some((a) => a.action === 'power')) && music === 'calm') music = 'epic';
 
   // chips for what was used

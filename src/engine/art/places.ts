@@ -21,6 +21,8 @@ export interface World {
   time: TimeOfDay;
   /** Shot-local seconds, for the few things that move in the background (water, clouds). */
   t: number;
+  /** What is written on the classroom board (taken from the scene's own text). */
+  board?: string;
 }
 
 export const INTERIOR: Record<PlaceId, boolean> = {
@@ -480,17 +482,55 @@ export function drawPlace(ctx: Ctx, place: PlaceId, layer: Layer, w: World): voi
         const by = gY - H * 0.12 - bh - H * 0.06;
         cel(ctx, `M${bx - m * 0.015},${by - m * 0.015} h${bw + m * 0.03} v${bh + m * 0.03} h${-(bw + m * 0.03)} Z`, '#8a5a3c', 3);
         fill(ctx, `M${bx},${by} h${bw} v${bh} h${-bw} Z`, '#2f5d50');
+        // chalk: only the scene's own words, never placeholder text
+        const winRight = W * (W > H ? 0.06 : 0.04) + bw * 0.28;
+        const tx0 = Math.max(bx, winRight) + bw * 0.06;
+        const tx1 = bx + bw * 0.94;
         ctx.save();
         ctx.fillStyle = '#e8f1ea';
-        ctx.globalAlpha = 0.9;
+        ctx.strokeStyle = '#e8f1ea';
+        ctx.globalAlpha = 0.92;
         ctx.direction = 'rtl';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.font = `700 ${Math.round(bh * 0.32)}px "Aref Ruqaa", "Cairo", serif`;
-        ctx.fillText('أ ب ت', bx + bw * 0.62, by + bh * 0.42);
-        ctx.font = `700 ${Math.round(bh * 0.2)}px "Cairo", sans-serif`;
-        ctx.direction = 'ltr';
-        ctx.fillText('1 + 2 = 3', bx + bw * 0.26, by + bh * 0.62);
+        const words = (w.board ?? '').trim();
+        if (words) {
+          let size = bh * 0.3;
+          let lines: string[] = [];
+          for (;;) {
+            ctx.font = `700 ${Math.round(size)}px "Aref Ruqaa", "Cairo", serif`;
+            lines = [];
+            let line = '';
+            for (const word of words.split(/\s+/)) {
+              const c = line ? `${line} ${word}` : word;
+              if (line && ctx.measureText(c).width > tx1 - tx0) {
+                lines.push(line);
+                line = word;
+              } else line = c;
+            }
+            if (line) lines.push(line);
+            if ((lines.length <= 2 && Math.max(...lines.map((l) => ctx.measureText(l).width)) <= tx1 - tx0) || size < bh * 0.12) break;
+            size *= 0.9;
+          }
+          const lh = size * 1.25;
+          const top0 = by + bh / 2 - (lines.length * lh) / 2;
+          lines.forEach((l, i) => ctx.fillText(l, (tx0 + tx1) / 2, top0 + lh * (i + 0.5)));
+          const wid = Math.min(tx1 - tx0, ctx.measureText(lines[0]).width);
+          ctx.lineWidth = Math.max(2, size * 0.06);
+          ctx.beginPath();
+          ctx.moveTo((tx0 + tx1) / 2 - wid / 2, top0 + lh * lines.length + size * 0.05);
+          ctx.lineTo((tx0 + tx1) / 2 + wid / 2, top0 + lh * lines.length + size * 0.05);
+          ctx.stroke();
+        } else {
+          ctx.globalAlpha = 0.25;
+          ctx.lineWidth = Math.max(2, bh * 0.02);
+          for (let i = 0; i < 3; i++) {
+            ctx.beginPath();
+            ctx.moveTo(tx1 - bw * 0.05, by + bh * (0.3 + i * 0.2));
+            ctx.lineTo(tx0 + bw * (0.1 + i * 0.08), by + bh * (0.3 + i * 0.2));
+            ctx.stroke();
+          }
+        }
         ctx.restore();
         interiorWindow(ctx, w, W * (W > H ? 0.06 : 0.04), by, bw * 0.28, bh);
         // clock

@@ -181,6 +181,8 @@ function fixShot(v: unknown, i: number, castIds: string[], propIds: string[]): S
     const idx = Math.round(num(v.dialogue.actor, 0, MAX_ACTORS_PER_SHOT - 1, 0));
     if (text && actors[idx]) shot.dialogue = { actor: idx, text };
   }
+  const board = str(v.board, 60);
+  if (board) shot.board = board;
   if (Array.isArray(v.props)) {
     const props = v.props.map((p) => fixPlacement(p, propIds)).filter((p): p is PropPlacement => p !== null).slice(0, 6);
     if (props.length) shot.props = props;

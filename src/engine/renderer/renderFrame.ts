@@ -1,7 +1,8 @@
 import { ASPECTS, FPS, type Character, type Project, type Shot, type Size } from '../../domain/types';
 import { shotAt } from '../../domain/timeline';
 import { cssFamily, fontById } from '../../design/fonts';
-import { drawCharacter, rig } from '../art/body';
+import { drawCharacter, rig, type Pose } from '../art/body';
+import { drawCharacterSide } from '../art/side';
 import { drawEffect } from '../art/effects';
 import { INTERIOR, LAYERS, drawPlace, skyBody, type World } from '../art/places';
 import { poseAt, type PoseResult } from '../art/poses';
@@ -278,7 +279,7 @@ function drawImpactFrame(ctx: Ctx, project: Project, a: ActorFrame, flash: numbe
   ctx.scale(bodyT.zL, bodyT.zL);
   ctx.translate(a.wx, L.gY);
   ctx.scale(L.unit, L.unit);
-  drawCharacter(ctx, a.ch, a.pr.pose, { sil: INK, k: 1 });
+  drawAny(ctx, a.ch, a.pr.pose, { sil: INK, k: 1 });
   ctx.restore();
   void project;
 }
@@ -334,6 +335,9 @@ function drawCracks(ctx: Ctx, target: { x: number; y: number; r: number }, since
   ctx.restore();
 }
 
+const drawAny = (ctx: Ctx, ch: Character, pose: Pose, paint?: { sil: string; k: number }) =>
+  pose.side ? drawCharacterSide(ctx, ch, pose, pose.side, paint) : drawCharacter(ctx, ch, pose, paint);
+
 export interface RenderOptions {
   /** Skip text and bubbles (thumbnails). */
   noText?: boolean;
@@ -361,11 +365,13 @@ export function renderFrame(project: Project, frame: number, ctx: Ctx, out: Size
     const voice = opts.lipSync?.[shot.id];
     const speaker = shot.dialogue?.actor ?? (voice ? 0 : -1);
     const level = voice?.[at.local] ?? 0;
-    const pr = poseAt(a, t, dur, `${shot.id}:${i}`, speaker === i, voice ? level >= 0.17 : undefined);
+    // three mouth drawings from the voice energy: closed, half, open
+    const mouth = voice ? (level < 0.17 ? 0 : level < 0.5 ? 1 : 2) : undefined;
+    const pr = poseAt(a, t, dur, `${shot.id}:${i}`, speaker === i, mouth);
     actors.push({ ch, pr, wx: pr.x * L.W });
   });
 
-  const world: World = { W: L.W, H: L.H, gY: L.gY, time: shot.place === 'space' ? 'night' : shot.time, t };
+  const world: World = { W: L.W, H: L.H, gY: L.gY, time: shot.place === 'space' ? 'night' : shot.time, t, board: shot.board };
   const cam = camera(shot, actors, t, dur, L);
 
   for (const layer of LAYERS) {
@@ -404,7 +410,7 @@ export function renderFrame(project: Project, frame: number, ctx: Ctx, out: Size
     ctx.transform(bodyT.zL, 0, 0, bodyT.zL, bodyT.tx, bodyT.ty);
     ctx.translate(a.wx, L.gY);
     ctx.scale(L.unit, L.unit);
-    const info = drawCharacter(ctx, a.ch, a.pr.pose);
+    const info = drawAny(ctx, a.ch, a.pr.pose);
     ctx.restore();
     const head = toScreen(a.wx, L.gY + info.headTop * L.unit);
     anchors.push(head);

@@ -29,7 +29,7 @@ export type Transition = 'cut' | 'dip' | 'flash';
 export type CharKind = 'boy' | 'girl' | 'man' | 'woman';
 export type OutfitId = 'dishdasha' | 'massar' | 'ghutra' | 'abaya' | 'omaniDress' | 'school' | 'casual' | 'labcoat';
 export type ActionId = 'stand' | 'walk' | 'run' | 'dance' | 'nod' | 'wave' | 'talk' | 'point' | 'cheer' | 'jump' | 'think' | 'greet' | 'clap' | 'power';
-export type Expression = 'calm' | 'happy' | 'set' | 'surprised' | 'sad' | 'look';
+export type Expression = 'calm' | 'happy' | 'set' | 'surprised' | 'sad' | 'look' | 'amazed' | 'embarrassed' | 'angry' | 'shy' | 'gloom';
 export type EffectId = 'fireworks' | 'confetti' | 'rain' | 'sparkles' | 'speedlines' | 'ribbons' | 'balloons' | 'dust' | 'shootingStars';
 export type MusicId = 'none' | 'calm' | 'festive' | 'epic';
 export type PropMotion = 'none' | 'float' | 'bounce' | 'spin' | 'fly' | 'grow' | 'pulse';
@@ -92,6 +92,8 @@ export interface Shot {
   text?: ShotText;
   dialogue?: Dialogue;
   props?: PropPlacement[];
+  /** Words written on the classroom board. */
+  board?: string;
   /** How this shot hands over to the next one. */
   transition: Transition;
 }
@@ -208,6 +210,11 @@ export const EXPRESSIONS: { id: Expression; label: string }[] = [
   { id: 'set', label: 'حازم' },
   { id: 'surprised', label: 'متفاجئ' },
   { id: 'sad', label: 'حزين' },
+  { id: 'amazed', label: 'منبهر (عيون لامعة)' },
+  { id: 'embarrassed', label: 'محرج (قطرة عرق)' },
+  { id: 'angry', label: 'غاضب (علامة غضب)' },
+  { id: 'shy', label: 'خجول' },
+  { id: 'gloom', label: 'محبط (خطوط الإحباط)' },
 ];
 
 export const EFFECTS: { id: EffectId; label: string }[] = [

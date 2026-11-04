@@ -154,7 +154,9 @@ function actionSfx(m: Mixer, shot: Shot, t0: number, dur: number, seed: number) 
       case 'run': {
         const hard = shot.place === 'city' || shot.place === 'classroom' || shot.place === 'home';
         const step = cached(`step${hard}`, () => normalize(hard ? bandpass(noise(0.08, 11), 900, 1.2).map((v, i) => v * Math.exp(-i / SR / 0.015)) : lowpass(noise(0.12, 12), 1600).map((v, i) => v * Math.exp(-i / SR / 0.03))));
-        for (let f = 0; f / FPS < Math.max(0.5, dur - 0.6); f += a.action === 'run' ? 5 : 8) m.add(step, t0 + f / FPS, a.action === 'run' ? 0.24 : 0.18, pan);
+        // one footfall per contact drawing of the side-view cycle: every 8 frames walking, every 6 running
+        const until = Math.max(0.5, (a.action === 'run' ? 0.75 : 1) * (dur - 0.6));
+        for (let f = 0; f / FPS < until; f += a.action === 'run' ? 6 : 8) m.add(step, t0 + f / FPS, a.action === 'run' ? 0.24 : 0.18, pan);
         break;
       }
       case 'dance':

@@ -24,6 +24,7 @@ export function Sidebar({ description, aspect, font, mode, onMode, onDescription
   const [paste, setPaste] = useState('');
   const [pasteMsg, setPasteMsg] = useState<{ ok: boolean; text: string; warnings?: string[] } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [shared, setShared] = useState(false);
 
   const create = () => {
     setError(null);
@@ -109,6 +110,23 @@ export function Sidebar({ description, aspect, font, mode, onMode, onDescription
           </div>
           <button type="button" className="primary big" onClick={create} disabled={!description.trim()}>
             أنشئ المشهد
+          </button>
+          <button
+            type="button"
+            className="share"
+            disabled={!description.trim()}
+            onClick={async () => {
+              const url = `${location.origin}${location.pathname}?d=${encodeURIComponent(description.trim())}`;
+              try {
+                await navigator.clipboard.writeText(url);
+                setShared(true);
+                setTimeout(() => setShared(false), 2500);
+              } catch {
+                setShared(false);
+              }
+            }}
+          >
+            {shared ? 'نُسخ الرابط ✓ أرسله لمن تريد' : '🔗 انسخ رابط المشهد'}
           </button>
           {error && <div className="alert error">{error}</div>}
           {report && (

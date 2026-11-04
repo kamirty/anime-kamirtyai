@@ -21,7 +21,26 @@ import { LibraryDialog } from './components/LibraryDialog';
 import { VoiceRecorder } from './components/VoiceRecorder';
 import { GuidedTour } from './components/GuidedTour';
 
+/** A shared link (?d=…) opens that description, even over the autosave. Read once, at load. */
+const SHARED: string | null = (() => {
+  try {
+    const d = new URLSearchParams(location.search).get('d');
+    if (!d || !d.trim()) return null;
+    history.replaceState(null, '', location.pathname);
+    return d.slice(0, 1500);
+  } catch {
+    return null;
+  }
+})();
+
 function initial(): { project: Project; description: string } {
+  if (SHARED) {
+    try {
+      return { project: describeToProject(SHARED).project, description: SHARED };
+    } catch {
+      /* fall back to the autosave */
+    }
+  }
   const saved = loadLocal();
   if (saved) return saved;
   const description = EXAMPLES[0].text;
@@ -226,6 +245,9 @@ export function App() {
         </a>
         <input className="title-input" value={project.title} maxLength={80} onChange={(e) => setProject((p) => ({ ...p, title: e.target.value }), false)} aria-label="اسم المشروع" />
         <div className="actions">
+          <a className="button" href="/lab/" title="دروس تفاعلية في مبادئ تحريك الأنمي">
+            مختبر الحركة
+          </a>
           <button type="button" onClick={() => setTourOpen(true)}>❔ دليل</button>
           <button type="button" onClick={() => setLibraryOpen(true)}>مشاريعي</button>
           <button type="button" onClick={undo} disabled={!past.length} title="تراجع (Ctrl+Z)">
@@ -389,6 +411,8 @@ export function App() {
         </div>
         <p className="footer-note">كل شيء يعمل داخل متصفحك: لا نرفع وصفك أو ملفاتك أو فيديوهاتك إلى أي خادم. الرسوم والأصوات مولّدة بالكود، والفيديو ملكك دون أي شعار.</p>
         <nav className="footer-links">
+          <a href="/lab/">مختبر الحركة</a>
+          <span>·</span>
           <a href="https://motion.kamirtyai.com/">مولّد الموشن</a>
           <span>·</span>
           <a href="https://www.kamirtyai.com/">أدوات كاميرتي</a>

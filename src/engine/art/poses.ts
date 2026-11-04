@@ -45,7 +45,7 @@ function gazeFor(e: Expression, seed: number): { x: number; y: number } {
   return { x: (seed % 2 ? 1 : -1) * 6, y: -6 };
 }
 
-export function poseAt(actor: Actor, t: number, duration: number, seed0: string, speaking: boolean, mouthOpen?: boolean): PoseResult {
+export function poseAt(actor: Actor, t: number, duration: number, seed0: string, speaking: boolean, mouthLevel?: number): PoseResult {
   const seed = hash(seed0);
   const tq = onTwos(t);
   const p = restPose(actor.expression);
@@ -58,44 +58,19 @@ export function poseAt(actor: Actor, t: number, duration: number, seed0: string,
   switch (actor.action) {
     case 'stand':
       break;
-    case 'walk': {
-      const to = actor.to ?? (actor.x < 0.5 ? 0.7 : 0.3);
-      const travel = clamp(tq / Math.max(0.5, duration - 0.6), 0, 1);
-      x = actor.x + (to - actor.x) * travel;
-      const moving = travel < 1;
-      if (moving) {
-        const cyc = Math.floor((t * 24) / 4) % 4; // four drawings, 4 frames each
-        const side = to > actor.x ? 1 : -1;
-        p.dy = cyc % 2 ? -0.014 * 1000 : 0;
-        const a = cyc === 0 ? 1 : cyc === 2 ? -1 : 0;
-        p.feet = [a * 30 * side, -a * 30 * side, cyc === 1 ? 14 : 0, cyc === 3 ? 14 : 0];
-        p.legL = [0.04 + a * 0.22, a < 0 ? 0.25 : 0];
-        p.legR = [0.04 - a * 0.22, a > 0 ? 0.25 : 0];
-        p.armL = [0.12 - a * 0.25, 0.1];
-        p.armR = [0.12 + a * 0.25, 0.1];
-        p.hem = a * 0.6;
-        p.lean = side * 0.03;
-        p.gaze = { x: side * 10, y: 0 };
-      }
-      break;
-    }
+    case 'walk':
     case 'run': {
-      const to = actor.to ?? (actor.x < 0.5 ? 0.85 : 0.15);
-      const travel = clamp(tq / Math.max(0.4, duration - 0.3), 0, 1);
+      // side view: an 8-drawing walk or a 6-drawing run, on twos
+      const run = actor.action === 'run';
+      const to = actor.to ?? (actor.x < 0.5 ? 0.8 : 0.2);
+      const travelTime = Math.max(0.5, (run ? 0.75 : 1) * (duration - 0.6));
+      const travel = clamp(tq / travelTime, 0, 1);
       x = actor.x + (to - actor.x) * travel;
       if (travel < 1) {
-        const cyc = Math.floor(t * 24 / 3) % 4;
-        const side = to > actor.x ? 1 : -1;
-        const a = cyc === 0 ? 1 : cyc === 2 ? -1 : 0;
-        p.dy = cyc % 2 ? -36 : 0;
-        p.lean = side * 0.14;
-        p.feet = [a * 70 * side, -a * 70 * side, cyc === 1 ? 32 : 0, cyc === 3 ? 32 : 0];
-        p.legL = [0.2 + a * 0.5, a < 0 ? 0.5 : 0];
-        p.legR = [0.2 - a * 0.5, a > 0 ? 0.5 : 0];
-        p.armL = [0.3 - a * 0.45, 0.8];
-        p.armR = [0.3 + a * 0.45, 0.8];
-        p.hem = a * 0.7;
-        p.gaze = { x: side * 10, y: 0 };
+        const drawings = run ? 6 : 8;
+        const phase = (Math.floor((t * 24) / 2) % drawings) / drawings;
+        p.side = { facing: to >= actor.x ? 1 : -1, phase, run };
+        if (run && actor.expression === 'calm') p.expression = 'set';
       }
       break;
     }
@@ -216,9 +191,13 @@ export function poseAt(actor: Actor, t: number, duration: number, seed0: string,
   if (speaking) {
     // mouth flaps on twos with a pause every few drawings
     const step = Math.floor((t * 24) / 3);
-    p.mouthOpen = mouthOpen ?? (step % 2 === 0 && step % 7 !== 6);
+    if (mouthLevel !== undefined) {
+      // recorded voice: closed, half or open, following the loudness
+      p.mouth = mouthLevel;
+      p.mouthOpen = false;
+    } else p.mouthOpen = step % 2 === 0 && step % 7 !== 6;
     if (p.expression === 'happy') p.expression = 'look';
-    p.gaze = { x: 0, y: 0 };
+    if (!p.side) p.gaze = { x: 0, y: 0 };
   }
   return { pose: p, x };
 }

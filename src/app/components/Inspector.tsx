@@ -110,6 +110,12 @@ export function Inspector({ project, index, onShot, onProject, onMove, onDuplica
           </option>
         ))}
       </select>
+      {shot.place === 'classroom' && (
+        <>
+          <label className="label">المكتوب على السبورة</label>
+          <input value={shot.board ?? ''} maxLength={60} onChange={(e) => onShot({ board: e.target.value || undefined })} placeholder="مثال: حرف الضاد" />
+        </>
+      )}
       <label className="label">الوقت</label>
       <Seg items={TIMES} value={shot.time} onChange={(time) => onShot({ time })} />
       <label className="label">حجم اللقطة</label>
