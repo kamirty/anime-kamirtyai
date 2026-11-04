@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { ASPECTS, FPS, type Project } from '../../domain/types';
 import { fmtTime, totalFrames } from '../../domain/timeline';
 import { renderFrameSafe } from '../../engine/renderer/renderFrame';
+import { downloadBlob, safeName } from '../../storage/projectFile';
 
 interface Props {
   project: Project;
@@ -24,6 +25,14 @@ export function Preview({ project, frame, playing, preparing, ready, renderKey, 
     renderFrameSafe(project, Math.min(frame, total - 1), ctx, size);
   }, [project, frame, ready, renderKey, size, total]);
 
+  const saveFrame = () => {
+    const canvas = ref.current;
+    if (!canvas || !ready) return;
+    canvas.toBlob((blob) => {
+      if (blob) downloadBlob(blob, `${safeName(project.title)}-frame-${String(frame + 1).padStart(4, '0')}.png`);
+    }, 'image/png');
+  };
+
   return (
     <section className={`preview is-${project.aspect}`}>
       <div className="stage">
@@ -36,6 +45,7 @@ export function Preview({ project, frame, playing, preparing, ready, renderKey, 
           {playing ? '❚❚' : '▶'}
         </button>
         <input type="range" min={0} max={Math.max(0, total - 1)} value={Math.min(frame, total - 1)} onChange={(e) => onFrame(Number(e.target.value))} aria-label="موضع المعاينة" />
+        <button type="button" onClick={saveFrame} disabled={!ready} title="تنزيل الإطار الحالي كصورة PNG" aria-label="حفظ الإطار صورة PNG">📷 صورة</button>
         <span className="time" dir="ltr">
           {fmtTime(frame / FPS)} / {fmtTime(total / FPS)}
         </span>
