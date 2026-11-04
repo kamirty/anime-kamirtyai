@@ -537,3 +537,12 @@ a.button:hover { border-color: var(--rule); }
   .editor-modes button { padding-inline: 8px; }
   .voice-recorder .row { flex-wrap: wrap; }
 }
+
+
+/* Character workshop and extra export formats. */
+.character-preview { display: block; max-width: 100%; height: auto; margin-inline: auto; border-radius: 8px; border: 1px solid var(--border); }
+.character-presets { display: flex; flex-wrap: wrap; gap: 5px; }
+.character-presets button { border-radius: 999px; font-size: 0.74rem; padding: 3px 8px; background: var(--panel); }
+.extra-exports { display: grid; gap: 5px; margin-top: 16px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); }
+.extra-exports h3 { margin: 0; font-size: 0.95rem; }
+.extra-exports p { margin: 0 0 5px; }
