@@ -1,0 +1,20 @@
+// Font-face declarations only; the browser downloads a file the first time a face is used.
+import '@fontsource/cairo/400.css';
+import '@fontsource/cairo/700.css';
+import '@fontsource/aref-ruqaa/400.css';
+import '@fontsource/aref-ruqaa/700.css';
+import '@fontsource/reem-kufi/400.css';
+import '@fontsource/reem-kufi/700.css';
+import '@fontsource/tajawal/400.css';
+import '@fontsource/tajawal/700.css';
+import '@fontsource/lalezar/400.css';
+import '@fontsource/el-messiri/400.css';
+import '@fontsource/el-messiri/700.css';
+import '@fontsource/amiri/400.css';
+import '@fontsource/amiri/700.css';
+import '@fontsource/marhey/400.css';
+import '@fontsource/marhey/700.css';
+import '@fontsource/lemonada/400.css';
+import '@fontsource/lemonada/700.css';
+import '@fontsource/baloo-bhaijaan-2/400.css';
+import '@fontsource/baloo-bhaijaan-2/700.css';
