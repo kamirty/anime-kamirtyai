@@ -236,8 +236,8 @@ export function drawCharacterSide(ctx: Ctx, ch: Character, pose: Pose, gait: Sid
   const sleeve = sleeveColor(ch);
   const sl = ch.outfit === 'abaya' ? r.sleeve * 1.2 : r.sleeve;
   const shoulder: [number, number] = [0, top + 0.035 * H];
-  const farArm = sideLimb(shoulder, armSwing, gait.run ? -1.5 : -0.25, r.ua, r.fa);
-  const nearArm = sideLimb(shoulder, -armSwing, gait.run ? -1.5 : -0.25, r.ua, r.fa);
+  const farArm = sideLimb(shoulder, armSwing, gait.run ? 1.5 : 0.3, r.ua, r.fa);
+  const nearArm = sideLimb(shoulder, -armSwing, gait.run ? 1.5 : 0.3, r.ua, r.fa);
   strokeLimb(ctx, farArm, darken(sleeve, 0.12), sl, o, paint);
   circle(ctx, farArm.h[0], farArm.h[1], r.hand, darken(skin, 0.12), o * 0.8, paint);
 
