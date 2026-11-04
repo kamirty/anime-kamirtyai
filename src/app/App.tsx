@@ -19,6 +19,7 @@ import { ExportDialog } from './components/ExportDialog';
 import { ThemeToggle, useUiTheme } from './theme';
 import { LibraryDialog } from './components/LibraryDialog';
 import { VoiceRecorder } from './components/VoiceRecorder';
+import { GuidedTour } from './components/GuidedTour';
 
 function initial(): { project: Project; description: string } {
   const saved = loadLocal();
@@ -66,6 +67,7 @@ export function App() {
   const [music, setMusic] = useState<UserMusic | null>(null);
   const [voices, setVoices] = useState<SceneVoices>({});
   const [libraryOpen, setLibraryOpen] = useState(false);
+  const [tourOpen, setTourOpen] = useState(false);
   const [mode, setMode] = useState<'simple' | 'pro'>(initialMode);
   const [theme, setTheme] = useUiTheme();
   const player = useRef(new PreviewAudio());
@@ -228,6 +230,7 @@ export function App() {
             <button type="button" aria-pressed={mode === 'simple'} className={mode === 'simple' ? 'active' : ''} onClick={() => setMode('simple')}>سهل</button>
             <button type="button" aria-pressed={mode === 'pro'} className={mode === 'pro' ? 'active' : ''} onClick={() => setMode('pro')}>احترافي</button>
           </div>
+          <button type="button" onClick={() => setTourOpen(true)}>❔ دليل</button>
           <button type="button" onClick={() => setLibraryOpen(true)}>مشاريعي</button>
           <button type="button" onClick={undo} disabled={!past.length} title="تراجع (Ctrl+Z)">
             ↶ تراجع
@@ -396,6 +399,7 @@ export function App() {
         </nav>
       </footer>
 
+      {tourOpen && <GuidedTour onClose={() => setTourOpen(false)} />}
       {libraryOpen && <LibraryDialog project={project} description={description} onClose={() => setLibraryOpen(false)} onLoad={(p, d) => { setDescription(d); loadProject(p, 'تم فتح مشروعك المحفوظ.'); }} />}
       {exporting && <ExportDialog project={project} getAudio={getAudio} lipSync={lipSync} onClose={() => setExporting(false)} />}
     </div>
