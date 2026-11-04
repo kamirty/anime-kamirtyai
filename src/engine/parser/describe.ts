@@ -80,7 +80,7 @@ interface Seg {
   title: boolean;
 }
 
-const ACTION_RANK: ActionId[] = ['power', 'jump', 'cheer', 'clap', 'wave', 'greet', 'point', 'think', 'talk', 'walk', 'stand'];
+const ACTION_RANK: ActionId[] = ['power', 'jump', 'run', 'dance', 'nod', 'cheer', 'clap', 'wave', 'greet', 'point', 'think', 'talk', 'walk', 'stand'];
 
 const QUOTE_RE = /[«"“„]([^«»"“”„]{1,200})[»"”“]/g;
 const CAPTION_RE = /(?:عبارة|عباره|جملة|جمله|عنوان|رسالة|رساله|شعار|لافتة|لافته|مكتوب(?:ة|ه)?(?:\s+عليها|\s+عليه)?|نص)\s*[:：]?\s*([^\n«»"“”]{2,160})$/m;
