@@ -1,4 +1,4 @@
-import { ACTIONS, REST_RIG, type ActionId, type Actor, type DirectorCam, type Expression, type HeldProp, type Project, type RigPose, type Shot } from '../domain/types';
+import { ACTIONS, REST_RIG, type ActionId, type Actor, type DirectorCam, type Expression, type HandShape, type HeldProp, type Project, type RigPose, type Shot } from '../domain/types';
 import { AT, MID, armTo as A, bothTo as B } from './art/reach';
 
 /**
@@ -55,7 +55,7 @@ export const MOTIONS: Motion[] = [
     label: 'تلويح باليدين',
     desc: 'يلوّح بحماس بكلتا يديه',
     expression: 'happy',
-    rig: { from: B(0.1, AT.eye - 0.06), to: B(0.16, AT.eye - 0.14), loop: 0.4 },
+    rig: { from: B(0.12, AT.eye - 0.05), to: B(0.2, AT.eye - 0.11), loop: 0.4 },
   },
   { id: 'greet', cat: 'everyday', icon: '🤲', label: 'ترحيب', desc: 'كفّه على صدره مع ابتسامة', action: 'greet', expression: 'happy' },
   {
@@ -65,7 +65,7 @@ export const MOTIONS: Motion[] = [
     label: 'يمدّ يده للمصافحة',
     desc: 'يد ممدودة نحو الآخر',
     expression: 'look',
-    rig: { from: {}, to: { armR: A(0.22, AT.chest - 0.02), head: 0.04 } },
+    rig: { from: {}, to: { armR: A(0.24, AT.chest - 0.01), head: 0.04 } },
   },
   {
     id: 'bow',
@@ -74,7 +74,7 @@ export const MOTIONS: Motion[] = [
     label: 'انحناءة احترام',
     desc: 'ينحني ويضمّ يديه أمامه',
     expression: 'calm',
-    rig: { from: {}, to: { ...B(MID + 0.04, AT.waist), head: 0.18, lean: 0.42 } },
+    rig: { from: {}, to: { ...B(MID + 0.06, AT.waist + 0.02), head: 0.18, lean: 0.42 } },
   },
   {
     id: 'sit',
@@ -111,7 +111,7 @@ export const MOTIONS: Motion[] = [
     desc: 'كرم عُماني: دلّة في يده',
     expression: 'happy',
     hold: 'dallah',
-    rig: { from: { armR: A(0.08, AT.chest + 0.04), armL: A(MID + 0.08, AT.belly) }, to: { armR: A(0.14, AT.chest), armL: A(MID + 0.08, AT.belly), head: 0.05 } },
+    rig: { from: { armR: A(0.16, AT.chest + 0.05), armL: A(MID + 0.06, AT.belly) }, to: { armR: A(0.21, AT.chest + 0.01), armL: A(MID + 0.06, AT.belly), head: 0.05 } },
   },
   {
     id: 'sitfloor',
@@ -142,7 +142,7 @@ export const MOTIONS: Motion[] = [
     label: 'يشير إلى الأرض',
     desc: '«هنا، في هذا المكان»',
     expression: 'look',
-    rig: { from: {}, to: { armR: A(0.17, AT.belly + 0.07), head: 0.16, lean: 0.12 } },
+    rig: { from: {}, to: { armR: A(0.19, AT.belly + 0.08), head: 0.16, lean: 0.12 } },
   },
   {
     id: 'call',
@@ -151,7 +151,7 @@ export const MOTIONS: Motion[] = [
     label: 'ينادي من بعيد',
     desc: 'الكفّان حول الفم',
     expression: 'look',
-    rig: { from: {}, to: { ...B(MID + 0.045, AT.mouth), head: -0.05 } },
+    rig: { from: {}, to: { ...B(MID + 0.05, AT.mouth + 0.01), head: -0.05 } },
   },
   {
     id: 'whisper',
@@ -160,7 +160,7 @@ export const MOTIONS: Motion[] = [
     label: 'يهمس في أذن أحدهم',
     desc: 'كفّ بجانب الفم ورأس مائل',
     expression: 'look',
-    rig: { from: {}, to: { armR: A(MID + 0.07, AT.mouth), head: 0.12 } },
+    rig: { from: {}, to: { armR: A(MID + 0.075, AT.mouth + 0.01), head: 0.12 } },
   },
   {
     id: 'listen',
@@ -169,7 +169,7 @@ export const MOTIONS: Motion[] = [
     label: 'ينصت ويصغي',
     desc: 'كفّه خلف أذنه',
     expression: 'look',
-    rig: { from: {}, to: { armR: A(MID + 0.075, AT.ear), head: 0.1 } },
+    rig: { from: {}, to: { armR: A(MID + 0.08, AT.ear), head: 0.1 } },
   },
   {
     id: 'silence',
@@ -178,7 +178,7 @@ export const MOTIONS: Motion[] = [
     label: 'يطلب الهدوء',
     desc: 'إصبعه على شفتيه',
     expression: 'set',
-    rig: { from: {}, to: { armR: A(MID + 0.005, AT.mouth), head: 0.04 } },
+    rig: { from: {}, to: { armR: A(MID + 0.02, AT.mouth - 0.01), head: 0.04 } },
   },
   {
     id: 'invite',
@@ -187,7 +187,7 @@ export const MOTIONS: Motion[] = [
     label: 'يدعوك للتقدّم',
     desc: 'يده تفتح الطريق «تفضّل»',
     expression: 'happy',
-    rig: { from: { armR: A(0.06, AT.chest) }, to: { armR: A(0.24, AT.waist), head: 0.06 } },
+    rig: { from: { armR: A(0.14, AT.chest + 0.04) }, to: { armR: A(0.26, AT.waist), head: 0.06 } },
   },
   {
     id: 'openarms',
@@ -214,7 +214,7 @@ export const MOTIONS: Motion[] = [
     label: 'يشبك ذراعيه',
     desc: 'ذراعان متشابكتان على الصدر',
     expression: 'angry',
-    rig: { from: {}, to: { ...B(MID - 0.03, AT.chest + 0.05), head: 0.05 } },
+    rig: { from: {}, to: { ...B(MID - 0.025, AT.chest + 0.06), head: 0.05 } },
   },
   {
     id: 'refuse',
@@ -223,7 +223,7 @@ export const MOTIONS: Motion[] = [
     label: 'إشارة الرفض',
     desc: 'ذراعان متقاطعتان أمام الصدر: «لا»',
     expression: 'set',
-    rig: { from: B(0.08, AT.chest), to: { ...B(MID - 0.06, AT.neck), head: -0.04 } },
+    rig: { from: B(0.14, AT.chest + 0.04), to: { ...B(MID - 0.055, AT.neck - 0.02), head: -0.04 } },
   },
   {
     id: 'stop',
@@ -232,7 +232,7 @@ export const MOTIONS: Motion[] = [
     label: 'يرفع كفّه: قف',
     desc: 'كفّ مفتوح إلى الأمام',
     expression: 'set',
-    rig: { from: {}, to: { armR: A(0.1, AT.chin), head: -0.03 } },
+    rig: { from: {}, to: { armR: A(0.13, AT.mouth), head: -0.03 } },
   },
   {
     id: 'present',
@@ -241,7 +241,7 @@ export const MOTIONS: Motion[] = [
     label: 'يعرض ويقدّم',
     desc: 'كفّ مفتوح للأمام والآخر على الصدر',
     expression: 'look',
-    rig: { from: {}, to: { armR: A(0.17, AT.waist), armL: A(MID + 0.03, AT.chest), head: 0.05 } },
+    rig: { from: {}, to: { armR: A(0.21, AT.waist + 0.02), armL: A(MID + 0.03, AT.chest), head: 0.05 } },
   },
   {
     id: 'salute',
@@ -259,7 +259,7 @@ export const MOTIONS: Motion[] = [
     label: 'يرفع كفّه للتحية',
     desc: 'كفّ مرفوع لمصافحة عالية',
     expression: 'happy',
-    rig: { from: {}, to: { armR: A(0.16, AT.eye - 0.04) } },
+    rig: { from: {}, to: { armR: A(0.17, AT.eye - 0.03) } },
   },
   {
     id: 'handsup',
@@ -268,7 +268,7 @@ export const MOTIONS: Motion[] = [
     label: 'يرفع يديه مستسلمًا',
     desc: 'كفّان مرفوعان بجانب الرأس',
     expression: 'surprised',
-    rig: { from: {}, to: { ...B(0.19, AT.eye + 0.01), head: -0.03 } },
+    rig: { from: {}, to: { ...B(0.2, AT.eye + 0.02), head: -0.03 } },
   },
   {
     id: 'wavebye',
@@ -277,7 +277,7 @@ export const MOTIONS: Motion[] = [
     label: 'يودّع من بعيد',
     desc: 'تلويح بطيء بيد مرفوعة',
     expression: 'calm',
-    rig: { from: { armR: A(0.08, AT.eye - 0.1) }, to: { armR: A(0.17, AT.eye - 0.08) }, loop: 0.8 },
+    rig: { from: { armR: A(0.09, AT.eye - 0.09) }, to: { armR: A(0.18, AT.eye - 0.07) }, loop: 0.8 },
   },
   {
     id: 'countfingers',
@@ -286,7 +286,7 @@ export const MOTIONS: Motion[] = [
     label: 'يعدّ على أصابعه',
     desc: 'كفّ مرفوع والإصبع يعدّ عليه',
     expression: 'look',
-    rig: { from: { armL: A(-0.03, AT.chest - 0.06), armR: A(MID + 0.03, AT.chest + 0.02) }, to: { armL: A(-0.03, AT.chest - 0.08), armR: A(MID + 0.02, AT.chest - 0.03) }, loop: 1 },
+    rig: { from: { armL: A(0.1, AT.chest - 0.03), armR: A(MID + 0.05, AT.chest + 0.04) }, to: { armL: A(0.11, AT.chest - 0.06), armR: A(MID + 0.04, AT.chest - 0.01) }, loop: 1 },
   },
 
   // ───────────────────────── تعليم ومدرسة ─────────────────────────
@@ -298,7 +298,7 @@ export const MOTIONS: Motion[] = [
     desc: 'كتاب مفتوح بين يديه ورأسه منخفض',
     expression: 'calm',
     hold: 'book',
-    rig: { from: { ...B(-0.02, AT.chest + 0.06), head: 0.14 }, to: { ...B(-0.02, AT.chest + 0.06), head: 0.19 }, loop: 2.4 },
+    rig: { from: { ...B(0.0, AT.chest + 0.08), head: 0.14 }, to: { ...B(0.0, AT.chest + 0.08), head: 0.19 }, loop: 2.4 },
   },
   {
     id: 'showbook',
@@ -308,7 +308,7 @@ export const MOTIONS: Motion[] = [
     desc: 'يرفع الكتاب ليراه الجميع',
     expression: 'look',
     hold: 'book',
-    rig: { from: B(-0.02, AT.chest + 0.04), to: { ...B(-0.02, AT.chest - 0.05), head: -0.03 } },
+    rig: { from: B(0.04, AT.chest + 0.05), to: { ...B(0.08, AT.chin + 0.02), head: -0.03 } },
   },
   {
     id: 'write',
@@ -318,7 +318,7 @@ export const MOTIONS: Motion[] = [
     desc: 'يد مرفوعة بالقلم تكتب ذهابًا وإيابًا',
     expression: 'calm',
     hold: 'pen',
-    rig: { from: { armR: A(0.1, AT.ear + 0.04), head: -0.04 }, to: { armR: A(0.18, AT.eye + 0.04), head: -0.04 }, loop: 0.5 },
+    rig: { from: { armR: A(0.13, AT.ear + 0.03), head: -0.04 }, to: { armR: A(0.21, AT.eye + 0.03), head: -0.04 }, loop: 0.5 },
   },
   {
     id: 'writedesk',
@@ -350,7 +350,7 @@ export const MOTIONS: Motion[] = [
     label: 'يشرح بيديه',
     desc: 'كفّان مفتوحان يشرحان الفكرة',
     expression: 'look',
-    rig: { from: B(0.06, AT.chest), to: B(0.15, AT.waist), loop: 1.2 },
+    rig: { from: B(0.15, AT.chest + 0.03), to: B(0.21, AT.waist + 0.02), loop: 1.2 },
   },
   {
     id: 'pointboard',
@@ -360,7 +360,7 @@ export const MOTIONS: Motion[] = [
     desc: 'مؤشّر في يده نحو اللوح',
     expression: 'look',
     hold: 'pointer',
-    rig: { from: { armR: A(0.16, AT.chest - 0.02) }, to: { armR: A(0.2, AT.ear + 0.06), head: -0.04 } },
+    rig: { from: { armR: A(0.18, AT.chest - 0.01) }, to: { armR: A(0.22, AT.ear + 0.05), head: -0.04 } },
   },
   {
     id: 'givepaper',
@@ -370,7 +370,7 @@ export const MOTIONS: Motion[] = [
     desc: 'ورقة ممدودة لمن أمامه',
     expression: 'happy',
     hold: 'paper',
-    rig: { from: { armR: A(0.05, AT.chest + 0.05) }, to: { armR: A(0.21, AT.chest), head: 0.05 } },
+    rig: { from: { armR: A(0.13, AT.chest + 0.06) }, to: { armR: A(0.23, AT.chest + 0.01), head: 0.05 } },
   },
   {
     id: 'checkpaper',
@@ -380,7 +380,7 @@ export const MOTIONS: Motion[] = [
     desc: 'ورقة في يده ونظره عليها',
     expression: 'set',
     hold: 'paper',
-    rig: { from: { armR: A(0.02, AT.belly - 0.03), armL: A(MID + 0.1, AT.chest + 0.06), head: 0.16 }, to: { armR: A(0.05, AT.belly - 0.05), armL: A(MID + 0.1, AT.chest + 0.06), head: 0.16 }, loop: 1.6 },
+    rig: { from: { armR: A(0.06, AT.belly - 0.02), armL: A(MID + 0.12, AT.belly - 0.04), head: 0.16 }, to: { armR: A(0.09, AT.belly - 0.05), armL: A(MID + 0.12, AT.belly - 0.04), head: 0.16 }, loop: 1.6 },
   },
   {
     id: 'experiment',
@@ -390,7 +390,7 @@ export const MOTIONS: Motion[] = [
     desc: 'دورق في يده ويده الأخرى تسند',
     expression: 'look',
     hold: 'flask',
-    rig: { from: { armR: A(0.08, AT.chest + 0.02), armL: A(MID + 0.07, AT.belly), head: 0.12 }, to: { armR: A(0.08, AT.chest - 0.02), armL: A(MID + 0.07, AT.belly), head: 0.12 }, loop: 1.4 },
+    rig: { from: { armR: A(0.15, AT.chest + 0.05), armL: A(MID + 0.08, AT.belly), head: 0.12 }, to: { armR: A(0.15, AT.chest), armL: A(MID + 0.08, AT.belly), head: 0.12 }, loop: 1.4 },
   },
   {
     id: 'measure',
@@ -400,7 +400,7 @@ export const MOTIONS: Motion[] = [
     desc: 'يرفع الدورق إلى مستوى عينيه',
     expression: 'amazed',
     hold: 'flask',
-    rig: { from: {}, to: { armR: A(0.05, AT.eye + 0.03), head: -0.06 } },
+    rig: { from: {}, to: { armR: A(0.08, AT.eye + 0.02), head: -0.06 } },
   },
   {
     id: 'teach',
@@ -409,7 +409,7 @@ export const MOTIONS: Motion[] = [
     label: 'المعلّم يشرح ويشير',
     desc: 'يد ترفع نقطة واليد الأخرى على الصدر',
     expression: 'look',
-    rig: { from: {}, to: { armR: A(0.13, AT.chin + 0.02), armL: A(MID + 0.05, AT.chest + 0.04), head: -0.04 } },
+    rig: { from: {}, to: { armR: A(0.17, AT.chin), armL: A(MID + 0.05, AT.chest + 0.05), head: -0.04 } },
   },
   {
     id: 'ask',
@@ -418,7 +418,7 @@ export const MOTIONS: Motion[] = [
     label: 'يسأل سؤالًا',
     desc: 'كفّ مفتوح ورأس مائل باستفهام',
     expression: 'surprised',
-    rig: { from: {}, to: { armR: A(0.14, AT.chest + 0.02), head: 0.14 } },
+    rig: { from: {}, to: { armR: A(0.17, AT.chest + 0.04), head: 0.14 } },
   },
   {
     id: 'mic',
@@ -428,7 +428,7 @@ export const MOTIONS: Motion[] = [
     desc: 'إذاعة مدرسية أو تقديم',
     expression: 'look',
     hold: 'mic',
-    rig: { from: { armR: A(MID + 0.06, AT.mouth + 0.04), armL: A(0.04, AT.hip) }, to: { armR: A(MID + 0.06, AT.mouth + 0.02), armL: A(0.04, AT.hip) }, loop: 1.8 },
+    rig: { from: { armR: A(MID + 0.07, AT.mouth + 0.03), armL: A(0.05, AT.hip) }, to: { armR: A(MID + 0.07, AT.mouth + 0.01), armL: A(0.05, AT.hip) }, loop: 1.8 },
   },
   {
     id: 'phone',
@@ -438,7 +438,7 @@ export const MOTIONS: Motion[] = [
     desc: 'هاتف أمامه يلتقط صورة',
     expression: 'look',
     hold: 'phone',
-    rig: { from: {}, to: { armR: A(0.07, AT.chest - 0.06), armL: A(MID + 0.12, AT.chest + 0.04), head: -0.02 } },
+    rig: { from: {}, to: { armR: A(0.11, AT.chin), armL: A(MID + 0.13, AT.chest + 0.05), head: -0.02 } },
   },
   {
     id: 'plant',
@@ -458,7 +458,7 @@ export const MOTIONS: Motion[] = [
     desc: 'علم مرفوع في المناسبات الوطنية',
     expression: 'happy',
     hold: 'flag',
-    rig: { from: { armR: A(0.08, AT.chest) }, to: { armR: A(0.11, AT.chin - 0.02), head: -0.06 } },
+    rig: { from: { armR: A(0.08, AT.chest) }, to: { armR: A(0.13, AT.chin - 0.03), head: -0.06 } },
   },
   {
     id: 'ball',
@@ -468,7 +468,7 @@ export const MOTIONS: Motion[] = [
     desc: 'كرة في يده يقفز بها',
     expression: 'happy',
     hold: 'ball',
-    rig: { from: { armR: A(0.09, AT.chest + 0.02) }, to: { armR: A(0.09, AT.chest - 0.04), lift: 0.05 }, loop: 0.5 },
+    rig: { from: { armR: A(0.16, AT.chest + 0.03) }, to: { armR: A(0.16, AT.chest - 0.03), lift: 0.05 }, loop: 0.5 },
   },
 
   // ───────────────────────── مشاعر وحالات ─────────────────────────
@@ -479,7 +479,7 @@ export const MOTIONS: Motion[] = [
     label: 'رفع اليدين بالدعاء',
     desc: 'الكفّان مبسوطتان أمام الصدر',
     expression: 'calm',
-    rig: { from: {}, to: { ...B(MID + 0.045, AT.chest + 0.01), head: -0.06 } },
+    rig: { from: {}, to: { ...B(MID + 0.05, AT.chest + 0.02), head: -0.06 } },
   },
   {
     id: 'heart',
@@ -497,7 +497,7 @@ export const MOTIONS: Motion[] = [
     label: 'يمسح دموعه',
     desc: 'حزن ويد على العين',
     expression: 'sad',
-    rig: { from: { armR: A(MID + 0.06, AT.eye + 0.02), head: 0.1 }, to: { armR: A(MID + 0.06, AT.eye - 0.01), head: 0.14 }, loop: 0.6 },
+    rig: { from: { armR: A(MID + 0.065, AT.eye + 0.02), head: 0.1 }, to: { armR: A(MID + 0.065, AT.eye - 0.02), head: 0.14 }, loop: 0.6 },
   },
   {
     id: 'laugh',
@@ -524,7 +524,7 @@ export const MOTIONS: Motion[] = [
     label: 'خائف ومتراجع',
     desc: 'كفّان للدفاع وجسم يميل للخلف',
     expression: 'surprised',
-    rig: { from: {}, to: { ...B(MID + 0.05, AT.neck), lean: -0.22, head: -0.05 } },
+    rig: { from: {}, to: { ...B(0.08, AT.chin), lean: -0.22, head: -0.05 } },
   },
   {
     id: 'proud',
@@ -533,7 +533,7 @@ export const MOTIONS: Motion[] = [
     label: 'واثق ويداه على خصره',
     desc: 'ثقة وفخر',
     expression: 'set',
-    rig: { from: {}, to: { ...B(0.03, AT.waist + 0.05), head: -0.06 } },
+    rig: { from: {}, to: { ...B(0.035, AT.waist + 0.06), head: -0.06 } },
   },
   {
     id: 'tired',
@@ -551,7 +551,7 @@ export const MOTIONS: Motion[] = [
     label: 'يمسح العرق ارتياحًا',
     desc: 'انتهى الأمر بسلام',
     expression: 'embarrassed',
-    rig: { from: { armR: A(MID + 0.11, AT.brow) }, to: { armR: A(MID - 0.02, AT.brow), head: -0.05 }, loop: 0.9 },
+    rig: { from: { armR: A(MID + 0.12, AT.brow + 0.01) }, to: { armR: A(MID - 0.01, AT.brow + 0.01), head: -0.05 }, loop: 0.9 },
   },
   {
     id: 'facepalm',
@@ -605,7 +605,7 @@ export const MOTIONS: Motion[] = [
     label: 'يضمّ يديه أملًا',
     desc: 'كفّان متلاصقان تحت الذقن',
     expression: 'amazed',
-    rig: { from: {}, to: { ...B(MID + 0.03, AT.chin + 0.05), head: -0.08 } },
+    rig: { from: {}, to: { ...B(MID + 0.05, AT.chest), head: -0.08 } },
   },
   {
     id: 'idea',
@@ -614,7 +614,7 @@ export const MOTIONS: Motion[] = [
     label: 'فكرة!',
     desc: 'يرفع إصبعه وعيناه تلمعان',
     expression: 'amazed',
-    rig: { from: {}, to: { armR: A(0.07, AT.eye - 0.03), lift: 0.05, head: -0.05 } },
+    rig: { from: {}, to: { armR: A(0.08, AT.eye - 0.03), lift: 0.05, head: -0.05 } },
   },
 
   // ───────────────────────── رياضة وحماس ─────────────────────────
@@ -655,7 +655,7 @@ export const MOTIONS: Motion[] = [
     label: 'تمرين القرفصاء',
     desc: 'نزول وصعود متكرر',
     expression: 'set',
-    rig: { from: B(0.17, AT.chest - 0.04), to: { ...B(0.17, AT.chest - 0.04), crouch: 0.85 }, loop: 1 },
+    rig: { from: B(0.19, AT.chest - 0.02), to: { ...B(0.19, AT.chest - 0.02), crouch: 0.85 }, loop: 1 },
   },
   {
     id: 'armcircles',
@@ -664,7 +664,7 @@ export const MOTIONS: Motion[] = [
     label: 'تدوير الذراعين',
     desc: 'إحماء قبل التمرين',
     expression: 'set',
-    rig: { from: B(0.2, AT.shoulder - 0.12), to: B(0.2, AT.waist + 0.04), loop: 0.8 },
+    rig: { from: B(0.22, AT.shoulder - 0.14), to: B(0.22, AT.waist + 0.06), loop: 0.8 },
   },
   {
     id: 'toetouch',
@@ -682,7 +682,7 @@ export const MOTIONS: Motion[] = [
     label: 'لكمة سريعة',
     desc: 'قبضة تنطلق للأمام',
     expression: 'angry',
-    rig: { from: { armR: A(MID + 0.04, AT.chest), armL: A(MID + 0.06, AT.chin + 0.03) }, to: { armR: A(0.17, AT.chest - 0.03), armL: A(MID + 0.06, AT.chin + 0.03) }, loop: 0.35 },
+    rig: { from: { armR: A(0.04, AT.chest + 0.04), armL: A(0.06, AT.chin) }, to: { armR: A(0.2, AT.chest - 0.02), armL: A(0.06, AT.chin) }, loop: 0.35 },
   },
   {
     id: 'guard',
@@ -691,7 +691,7 @@ export const MOTIONS: Motion[] = [
     label: 'وضعية الاستعداد',
     desc: 'قبضتان أمام الوجه وركبتان مثنيتان',
     expression: 'set',
-    rig: { from: {}, to: { ...B(MID + 0.07, AT.chin + 0.04), crouch: 0.25, head: 0.04 } },
+    rig: { from: {}, to: { ...B(0.07, AT.chin), crouch: 0.25, head: 0.04 } },
   },
   {
     id: 'flex',
@@ -700,7 +700,7 @@ export const MOTIONS: Motion[] = [
     label: 'يستعرض قوته',
     desc: 'ذراعان مثنيتان بقوة',
     expression: 'happy',
-    rig: { from: {}, to: { ...B(0.12, AT.ear + 0.02), head: -0.04 } },
+    rig: { from: {}, to: { ...B(0.13, AT.ear + 0.01), head: -0.04 } },
   },
   {
     id: 'stretchside',
@@ -718,7 +718,7 @@ export const MOTIONS: Motion[] = [
     label: 'يجري في مكانه',
     desc: 'قفزات صغيرة والكفّان أمام الصدر',
     expression: 'set',
-    rig: { from: { ...B(0.08, AT.chest + 0.03), legL: [0.3, -0.7], legR: [0.02, 0] }, to: { ...B(0.08, AT.chest - 0.01), legL: [0.02, 0], legR: [0.3, -0.7], lift: 0.06 }, loop: 0.5 },
+    rig: { from: { ...B(0.13, AT.chest + 0.04), legL: [0.3, -0.7], legR: [0.02, 0] }, to: { ...B(0.13, AT.chest), legL: [0.02, 0], legR: [0.3, -0.7], lift: 0.06 }, loop: 0.5 },
   },
 
   // ───────────────────────── حركات الكاميرا ─────────────────────────
@@ -740,6 +740,89 @@ export const MOTIONS: Motion[] = [
   { id: 'cam-settle', cat: 'camera', icon: '🧘‍♂️', label: 'استقرار بعد الحركة', desc: 'تهدأ الكاميرا وتستقر على المشهد', cam: { from: { zoom: 1.45, x: 0.12, y: -0.08 }, to: { zoom: 1, x: 0, y: 0 }, ease: 'out' } },
 ];
 
+/**
+ * The shape of each hand (left, right) for a motion. A pointing finger, a flat palm, a fist or
+ * a grip says as much about a gesture as the angle of the arm does.
+ */
+const HANDS: Record<string, [HandShape, HandShape]> = {
+  // everyday
+  twowave: ['flat', 'flat'],
+  handshake: ['open', 'grip'],
+  bow: ['flat', 'flat'],
+  stretch: ['open', 'open'],
+  lookfar: ['open', 'flat'],
+  serve: ['open', 'grip'],
+  sit: ['grip', 'grip'],
+  sitfloor: ['open', 'open'],
+  // talk
+  pointup: ['open', 'point'],
+  pointdown: ['open', 'point'],
+  call: ['flat', 'flat'],
+  whisper: ['open', 'flat'],
+  listen: ['open', 'flat'],
+  silence: ['open', 'point'],
+  invite: ['open', 'flat'],
+  openarms: ['open', 'open'],
+  shrug: ['open', 'open'],
+  crossed: ['grip', 'grip'],
+  refuse: ['flat', 'flat'],
+  stop: ['open', 'flat'],
+  present: ['flat', 'flat'],
+  salute: ['open', 'flat'],
+  highfive: ['open', 'flat'],
+  handsup: ['flat', 'flat'],
+  wavebye: ['open', 'flat'],
+  countfingers: ['open', 'point'],
+  // school
+  read: ['grip', 'grip'],
+  showbook: ['grip', 'grip'],
+  write: ['open', 'grip'],
+  writedesk: ['flat', 'grip'],
+  raisehand: ['open', 'open'],
+  explain: ['open', 'open'],
+  pointboard: ['open', 'grip'],
+  givepaper: ['open', 'grip'],
+  checkpaper: ['flat', 'grip'],
+  experiment: ['flat', 'grip'],
+  measure: ['open', 'grip'],
+  teach: ['flat', 'point'],
+  ask: ['open', 'open'],
+  mic: ['open', 'grip'],
+  phone: ['open', 'grip'],
+  plant: ['grip', 'grip'],
+  flagraise: ['open', 'grip'],
+  ball: ['open', 'grip'],
+  // feel
+  dua: ['open', 'open'],
+  heart: ['flat', 'flat'],
+  cry: ['open', 'fist'],
+  laugh: ['open', 'open'],
+  shyface: ['flat', 'flat'],
+  scared: ['flat', 'flat'],
+  proud: ['grip', 'grip'],
+  tired: ['open', 'open'],
+  relief: ['open', 'flat'],
+  facepalm: ['open', 'flat'],
+  scratch: ['open', 'open'],
+  shiver: ['grip', 'grip'],
+  angryfists: ['fist', 'fist'],
+  despair: ['open', 'open'],
+  hopeful: ['grip', 'grip'],
+  idea: ['open', 'point'],
+  // sport
+  victory: ['fist', 'fist'],
+  applaudhigh: ['flat', 'flat'],
+  jacks: ['open', 'open'],
+  squat: ['open', 'open'],
+  armcircles: ['fist', 'fist'],
+  toetouch: ['open', 'open'],
+  punch: ['fist', 'fist'],
+  guard: ['fist', 'fist'],
+  flex: ['fist', 'fist'],
+  stretchside: ['open', 'open'],
+  jog: ['fist', 'fist'],
+};
+
 export type MotionTarget = 'all' | number;
 
 /** Applies a motion to one shot (or every shot) and returns the new project. Only motion fields change. */
@@ -754,6 +837,7 @@ export function applyMotion(project: Project, shotIndex: number, motionId: strin
       const next: Actor = { cast: a.cast, x: a.x, expression: m.expression ?? a.expression, action: m.action ?? 'custom' };
       if (m.rig) next.rig = { from: R(m.rig.from), to: m.rig.to ? R(m.rig.to) : undefined, loop: m.rig.loop };
       if (m.hold) next.hold = m.hold;
+      if (HANDS[m.id]) next.hands = [...HANDS[m.id]];
       if (next.action === 'walk' || next.action === 'run') next.to = a.to ?? (a.x < 0.5 ? 0.8 : 0.2);
       return next;
     });

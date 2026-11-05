@@ -25,16 +25,21 @@ export const SHOULDER = 0.1;
 /** `out` of the body's midline, for hands that cross the chest. */
 export const MID = -SHOULDER;
 
-/** Heights measured down from the shoulder (negative is above it). */
+/**
+ * Heights measured down from the shoulder (negative is above it), in body heights.
+ * Taken from the head drawing: the face spans crown −285 to chin 300 in head units at a scale
+ * of 0.3, so the mouth, eyes and brow sit far higher above the shoulder than they look on paper.
+ * Children have larger heads, so their face is a little higher again; these sit between the two.
+ */
 export const AT = {
   overhead: -0.3,
-  crown: -0.26,
-  eye: -0.14,
-  brow: -0.115,
-  ear: -0.115,
+  crown: -0.262,
+  brow: -0.212,
+  eye: -0.178,
+  ear: -0.17,
+  mouth: -0.126,
   chin: -0.082,
-  mouth: -0.055,
-  neck: -0.02,
+  neck: -0.03,
   shoulder: 0,
   chest: 0.07,
   waist: 0.14,
@@ -47,8 +52,11 @@ const r3 = (v: number) => Math.round(v * 1000) / 1000;
 
 /**
  * Angles that put the hand at (out, down).
- * The elbow stays outside the shoulder-to-hand line; by default it hangs low for hands at or
- * below shoulder height and lifts for hands above it, which is how a real arm folds.
+ *
+ * Two elbow positions reach any point. A real arm picks the one gravity picks — the lower of
+ * the two — but never one that would drive the elbow through the body, so the elbow must stay
+ * outside the shoulder. That single rule gives a straight arm when pointing, a hanging elbow
+ * when gesturing at the waist, and a raised elbow when the hand goes to the face.
  */
 export function armTo(out: number, down: number, elbow?: 1 | -1): Joint {
   const len = Math.hypot(out, down) || 1e-6;
@@ -57,12 +65,17 @@ export function armTo(out: number, down: number, elbow?: 1 | -1): Joint {
   const oy = (down / len) * d;
   const toward = Math.atan2(ox, oy);
   const spread = Math.acos(clamp((d * d + UA * UA - FA * FA) / (2 * d * UA), -1, 1));
-  const side = elbow ?? (down >= -0.04 ? 1 : -1);
-  const a = toward + side * spread;
-  const ex = Math.sin(a) * UA;
-  const ey = Math.cos(a) * UA;
-  const f = Math.atan2(ox - ex, oy - ey);
-  return [r3(a), r3(f - a)];
+  const pick = (a: number): Joint => {
+    const ex = Math.sin(a) * UA;
+    const ey = Math.cos(a) * UA;
+    return [r3(a), r3(Math.atan2(ox - ex, oy - ey) - a)];
+  };
+  if (elbow) return pick(toward + elbow * spread);
+  const options = [toward + spread, toward - spread].map((a) => ({ a, out: Math.sin(a) * UA, down: Math.cos(a) * UA }));
+  // the elbow may not sit inside the torso; of what is left, the lower one wins
+  const clear = options.filter((o) => o.out >= -0.025);
+  const best = (clear.length ? clear : options).reduce((m, o) => (clear.length ? (o.down > m.down ? o : m) : o.out > m.out ? o : m));
+  return pick(best.a);
 }
 
 /** Where `armTo` actually lands the hand, for tests and for the pose editor. */

@@ -48,6 +48,22 @@ describe('motion library', () => {
       expect(again.shots[idx].actors.map((x) => x.hold)).toEqual(b.actors.map((x) => x.hold));
     }
   });
+  it('keeps every elbow out of the body', () => {
+    // the upper arm may never point across the chest: that would put the elbow inside the torso
+    const UA = 0.165;
+    for (const [out, down] of [
+      [-0.1, 0.07],
+      [0.26, 0.05],
+      [0.13, -0.225],
+      [0.06, -0.3],
+      [-0.05, -0.178],
+      [-0.055, -0.126],
+      [0.17, 0.12],
+    ]) {
+      const [a] = armTo(out, down);
+      expect(Math.sin(a) * UA).toBeGreaterThan(-0.03);
+    }
+  });
   it('every motion poses without errors over a whole shot', () => {
     for (const m of MOTIONS.filter((x) => !x.cam)) {
       const { project } = describeToProject('ولد في المزرعة');

@@ -1,4 +1,5 @@
-import { SKINS, isFemale, isKid, type Character, type Expression, type HeldProp } from '../../domain/types';
+import { SKINS, isFemale, isKid, type Character, type Expression, type HandShape, type HeldProp } from '../../domain/types';
+import { drawHand } from './hand';
 import { drawHeld } from './held';
 import { drawHead, drawNeck, type Headwear } from './head';
 import { INK, PRACTICAL, LINE, type Ctx, type Paint, cel, darken, fill, lighten, shade, stroke } from './paint';
@@ -84,6 +85,9 @@ export interface Pose {
   orb?: { x: number; y: number; r: number };
   /** A small object held in the hands. */
   hold?: HeldProp;
+  /** Shape of each hand; they turn with the forearm. */
+  handL?: HandShape;
+  handR?: HandShape;
 }
 
 export const restPose = (expression: Expression = 'calm'): Pose => ({
@@ -390,10 +394,7 @@ export function drawCharacter(ctx: Ctx, ch: Character, pose: Pose, paint?: Paint
     }
     // hide the outline seam where the sleeve meets the body
     circle(ctx, A.s[0], A.s[1], sl / 2 - o * 0.2, sleeve, 0, paint);
-    circle(ctx, A.h[0], A.h[1], r.hand, skin, o * 0.8, paint);
   }
-
-  if (pose.hold) drawHeld(ctx, pose.hold, [AL.h, AR.h], H, ch.accent, paint);
 
   // ── energy orb (power move) ──
   if (pose.orb && !paint?.sil) {
@@ -428,6 +429,16 @@ export function drawCharacter(ctx: Ctx, ch: Character, pose: Pose, paint?: Paint
     lw: 1,
   });
   ctx.restore();
+
+  // what the hands hold, then the hands themselves: drawn after the head so a palm on the face
+  // reads as a palm on the face, not a hand hidden behind it
+  if (pose.hold) drawHeld(ctx, pose.hold, [AL.h, AR.h], H, ch.accent, paint);
+  for (const [A, shape] of [
+    [AL, pose.handL ?? 'open'],
+    [AR, pose.handR ?? 'open'],
+  ] as const) {
+    drawHand(ctx, A.h[0], A.h[1], Math.atan2(A.h[1] - A.e[1], A.h[0] - A.e[0]), shape, r.hand, skin, o * 0.9, paint);
+  }
   ctx.restore();
 
   const sx = 1 / Math.sqrt(pose.stretch);

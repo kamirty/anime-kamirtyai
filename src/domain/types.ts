@@ -61,7 +61,13 @@ export interface Actor {
   rig?: { from: RigPose; to?: RigPose; /** Seconds per back-and-forth cycle; the body then loops between the two poses. */ loop?: number };
   /** A small object in the hands while the pose plays (a book, chalk, a dallah …). */
   hold?: HeldProp;
+  /** Shape of the left and right hand, so a point points and a fist is a fist. */
+  hands?: [HandShape, HandShape];
 }
+
+/** Hand shapes, drawn turned along the forearm in `src/engine/art/hand.ts`. */
+export const HAND_SHAPES = ['open', 'fist', 'point', 'flat', 'grip'] as const;
+export type HandShape = (typeof HAND_SHAPES)[number];
 
 /** Objects a character can hold. Drawn at the hand, in `src/engine/art/held.ts`. */
 export const HELD = ['book', 'paper', 'pen', 'pointer', 'flask', 'ball', 'flag', 'cup', 'dallah', 'mic', 'phone', 'plant'] as const;
