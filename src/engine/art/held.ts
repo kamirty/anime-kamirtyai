@@ -1,5 +1,5 @@
 import type { HeldProp } from '../../domain/types';
-import { INK, type Ctx, type Paint, cel, darken, fill, stroke } from './paint';
+import { INK, type Ctx, type Paint, darken, fill, solid as cel, stroke, style } from './paint';
 
 /**
  * Small objects a character can hold while posing: a book for reading, chalk for the board,
@@ -50,7 +50,7 @@ export function drawHeld(ctx: Ctx, kind: HeldProp, hands: [[number, number], [nu
         if (!paint?.sil) for (let i = 1; i <= 3; i++) stroke(ctx, `M${n(sx * w * 0.2)},${n(-h * 0.2 + i * h * 0.14)} L${n(sx * w * 0.82)},${n(-h * 0.38 + i * h * 0.14)}`, '#9a948c', o * 0.7, paint);
         cel(ctx, `M${n(sx * w)},${n(-h * 0.45)} L${n(sx * (w + 0.012 * H))},${n(-h * 0.38)} L${n(sx * (w + 0.012 * H))},${n(h * 0.5)} L${n(sx * w)},${n(h * 0.42)} Z`, accent, o, paint);
       }
-      stroke(ctx, `M0,${n(-h * 0.1)} L0,${n(h * 0.3)}`, INK, o, paint);
+      stroke(ctx, `M0,${n(-h * 0.1)} L0,${n(h * 0.3)}`, style.flat ? '#b9b3a8' : INK, o, paint);
       break;
     }
     case 'paper': {
@@ -62,11 +62,11 @@ export function drawHeld(ctx: Ctx, kind: HeldProp, hands: [[number, number], [nu
     }
     case 'pen': {
       cel(ctx, `M${n(-0.008 * H)},${n(0.03 * H)} L${n(0.014 * H)},${n(-0.04 * H)} L${n(0.03 * H)},${n(-0.035 * H)} L${n(0.008 * H)},${n(0.035 * H)} Z`, accent, o, paint);
-      cel(ctx, `M${n(-0.008 * H)},${n(0.03 * H)} L${n(0.008 * H)},${n(0.035 * H)} L${n(-0.004 * H)},${n(0.05 * H)} Z`, INK, o * 0.6, paint);
+      fill(ctx, `M${n(-0.008 * H)},${n(0.03 * H)} L${n(0.008 * H)},${n(0.035 * H)} L${n(-0.004 * H)},${n(0.05 * H)} Z`, '#2b2f3a', paint);
       break;
     }
     case 'pointer': {
-      stroke(ctx, `M${n(-0.02 * H)},${n(0.03 * H)} L${n(0.16 * H)},${n(-0.2 * H)}`, INK, o * 2.4, paint);
+      stroke(ctx, `M${n(-0.02 * H)},${n(0.03 * H)} L${n(0.16 * H)},${n(-0.2 * H)}`, style.flat ? '#9a948c' : INK, o * 2.4, paint);
       stroke(ctx, `M${n(-0.02 * H)},${n(0.03 * H)} L${n(0.16 * H)},${n(-0.2 * H)}`, '#f0ece4', o * 1.4, paint);
       break;
     }
@@ -80,15 +80,15 @@ export function drawHeld(ctx: Ctx, kind: HeldProp, hands: [[number, number], [nu
         paint,
       );
       fill(ctx, `M${n(-0.03 * H)},${n(h * 0.1)} L${n(0.03 * H)},${n(h * 0.1)} L${n(0.042 * H)},${n(h * 0.4)} L${n(-0.042 * H)},${n(h * 0.4)} Z`, accent, paint, 0.85);
-      stroke(ctx, `M${n(-0.016 * H)},${n(-h * 0.62)} L${n(0.016 * H)},${n(-h * 0.62)}`, INK, o * 1.4, paint);
+      stroke(ctx, `M${n(-0.016 * H)},${n(-h * 0.62)} L${n(0.016 * H)},${n(-h * 0.62)}`, style.flat ? '#b9c4c8' : INK, o * 1.4, paint);
       break;
     }
     case 'ball': {
       const r = 0.045 * H;
       cel(ctx, `M${n(-r)},0 a${n(r)},${n(r)} 0 1,0 ${n(r * 2)},0 a${n(r)},${n(r)} 0 1,0 ${n(-r * 2)},0 Z`, '#f3efe8', o, paint);
       if (!paint?.sil) {
-        stroke(ctx, `M${n(-r * 0.9)},${n(-r * 0.3)} C${n(-r * 0.3)},${n(r * 0.3)} ${n(r * 0.3)},${n(r * 0.3)} ${n(r * 0.9)},${n(-r * 0.3)}`, INK, o, paint);
-        stroke(ctx, `M${n(-r * 0.6)},${n(r * 0.72)} C${n(-r * 0.2)},${n(r * 0.2)} ${n(r * 0.2)},${n(r * 0.2)} ${n(r * 0.6)},${n(r * 0.72)}`, INK, o, paint);
+        stroke(ctx, `M${n(-r * 0.9)},${n(-r * 0.3)} C${n(-r * 0.3)},${n(r * 0.3)} ${n(r * 0.3)},${n(r * 0.3)} ${n(r * 0.9)},${n(-r * 0.3)}`, '#a9a39a', o, paint);
+        stroke(ctx, `M${n(-r * 0.6)},${n(r * 0.72)} C${n(-r * 0.2)},${n(r * 0.2)} ${n(r * 0.2)},${n(r * 0.2)} ${n(r * 0.6)},${n(r * 0.72)}`, '#a9a39a', o, paint);
       }
       break;
     }
@@ -120,7 +120,7 @@ export function drawHeld(ctx: Ctx, kind: HeldProp, hands: [[number, number], [nu
       const w = 0.035 * H;
       cel(ctx, `M${n(-w)},${n(h * 0.42)} C${n(-w * 1.1)},${n(0)} ${n(-w * 0.72)},${n(-h * 0.2)} ${n(-w * 0.52)},${n(-h * 0.34)} L${n(w * 0.52)},${n(-h * 0.34)} C${n(w * 0.72)},${n(-h * 0.2)} ${n(w * 1.1)},0 ${n(w)},${n(h * 0.42)} Z`, accent, o, paint);
       cel(ctx, `M${n(-w * 0.56)},${n(-h * 0.34)} C${n(-w * 0.3)},${n(-h * 0.52)} ${n(w * 0.3)},${n(-h * 0.52)} ${n(w * 0.56)},${n(-h * 0.34)} Z`, darken(accent, 0.2), o * 0.8, paint);
-      stroke(ctx, `M0,${n(-h * 0.5)} L0,${n(-h * 0.6)}`, INK, o * 1.4, paint);
+      stroke(ctx, `M0,${n(-h * 0.5)} L0,${n(-h * 0.6)}`, darken(accent, 0.35), o * 1.4, paint);
       // spout
       cel(
         ctx,
@@ -130,7 +130,7 @@ export function drawHeld(ctx: Ctx, kind: HeldProp, hands: [[number, number], [nu
         paint,
       );
       // handle
-      stroke(ctx, `M${n(w * 0.95)},${n(-h * 0.18)} C${n(w * 2)},${n(-h * 0.12)} ${n(w * 2)},${n(h * 0.2)} ${n(w * 0.9)},${n(h * 0.26)}`, INK, o * 2.6, paint);
+      stroke(ctx, `M${n(w * 0.95)},${n(-h * 0.18)} C${n(w * 2)},${n(-h * 0.12)} ${n(w * 2)},${n(h * 0.2)} ${n(w * 0.9)},${n(h * 0.26)}`, darken(accent, 0.45), o * 2.6, paint);
       stroke(ctx, `M${n(w * 0.95)},${n(-h * 0.18)} C${n(w * 2)},${n(-h * 0.12)} ${n(w * 2)},${n(h * 0.2)} ${n(w * 0.9)},${n(h * 0.26)}`, darken(accent, 0.25), o * 1.5, paint);
       break;
     }

@@ -1,5 +1,5 @@
 import type { HandShape } from '../../domain/types';
-import { INK, type Ctx, type Paint } from './paint';
+import { INK, type Ctx, type Paint, darken, style } from './paint';
 
 /**
  * The hand, turned along the forearm.
@@ -17,7 +17,8 @@ export function drawHand(ctx: Ctx, x: number, y: number, angle: number, shape: H
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
   const fill = paint?.sil ?? skin;
-  const ink = paint?.sil ?? INK;
+  // in the flat style fingers are told apart by a soft shade of the skin, never by a black line
+  const ink = paint?.sil ?? (style.flat ? darken(skin, 0.14) : INK);
 
   const blob = (cx: number, cy: number, rx: number, ry: number, rot = 0) => {
     ctx.beginPath();
@@ -61,17 +62,17 @@ export function drawHand(ctx: Ctx, x: number, y: number, angle: number, shape: H
     }
     case 'point': {
       // palm closed, one finger out along the arm
-      finger(u * 0.4, -u * 0.1, u * 2.5, -u * 0.15, u * 0.5);
-      blob(u * 0.3, u * 0.1, u * 1.05, u * 0.95);
+      finger(u * 0.45, -u * 0.08, u * 2.15, -u * 0.12, u * 0.34);
+      blob(u * 0.3, u * 0.1, u * 1.1, u * 0.98);
       break;
     }
     case 'flat': {
       // fingers together, a flat palm: for a salute, a stop, a high five
       ctx.beginPath();
       ctx.moveTo(-u * 0.5, -u * 0.95);
-      ctx.lineTo(u * 1.5, -u * 0.8);
-      ctx.quadraticCurveTo(u * 2.2, -u * 0.7, u * 2.15, 0);
-      ctx.quadraticCurveTo(u * 2.1, u * 0.75, u * 1.4, u * 0.8);
+      ctx.lineTo(u * 1.25, -u * 0.78);
+      ctx.quadraticCurveTo(u * 1.85, -u * 0.66, u * 1.8, 0);
+      ctx.quadraticCurveTo(u * 1.76, u * 0.7, u * 1.2, u * 0.78);
       ctx.lineTo(-u * 0.5, u * 0.95);
       ctx.closePath();
       ctx.fillStyle = fill;
@@ -83,8 +84,8 @@ export function drawHand(ctx: Ctx, x: number, y: number, angle: number, shape: H
         ctx.lineWidth = o * 0.6;
         for (let i = -1; i <= 1; i++) {
           ctx.beginPath();
-          ctx.moveTo(u * 2.0, i * u * 0.5);
-          ctx.lineTo(u * 1.1, i * u * 0.52);
+          ctx.moveTo(u * 1.68, i * u * 0.46);
+          ctx.lineTo(u * 1.0, i * u * 0.48);
           ctx.stroke();
         }
       }
@@ -104,12 +105,12 @@ export function drawHand(ctx: Ctx, x: number, y: number, angle: number, shape: H
     }
     default: {
       // an open hand: palm with a soft fan of fingers and a thumb
-      finger(u * 0.5, -u * 0.5, u * 1.95, -u * 0.95, u * 0.42);
-      finger(u * 0.6, -u * 0.15, u * 2.15, -u * 0.25, u * 0.44);
-      finger(u * 0.6, u * 0.25, u * 2.05, u * 0.45, u * 0.42);
-      finger(u * 0.5, u * 0.6, u * 1.7, u * 1.05, u * 0.38);
-      finger(u * 0.1, u * 0.6, u * 0.5, u * 1.5, u * 0.42);
-      blob(u * 0.2, u * 0.05, u * 1.05, u * 0.95);
+      finger(u * 0.55, -u * 0.45, u * 1.62, -u * 0.8, u * 0.28);
+      finger(u * 0.6, -u * 0.14, u * 1.78, -u * 0.2, u * 0.3);
+      finger(u * 0.6, u * 0.2, u * 1.7, u * 0.36, u * 0.28);
+      finger(u * 0.5, u * 0.52, u * 1.45, u * 0.84, u * 0.25);
+      finger(u * 0.12, u * 0.6, u * 0.46, u * 1.26, u * 0.3);
+      blob(u * 0.2, u * 0.05, u * 1.1, u * 0.98);
       break;
     }
   }

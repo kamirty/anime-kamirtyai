@@ -1,5 +1,5 @@
 import type { Expression } from '../../domain/types';
-import { INK, MOON, P, PRACTICAL, LINE, type Ctx, type Paint, cel, darken, fill, lighten, shade, stroke } from './paint';
+import { INK, MOON, P, PRACTICAL, LINE, type Ctx, type Paint, cel, darken, edge, fill, lighten, shade, stroke, style } from './paint';
 
 /**
  * The approved Kamirty head: frontal face, centred nose and mouth, big anime eyes.
@@ -361,8 +361,8 @@ export function drawHead(ctx: Ctx, o: HeadOpts): void {
     fill(ctx, SIDE_HAIR_R, o.hair, p);
     cel(ctx, EAR, o.skin, 6 * lw, p);
     cel(ctx, EAR_R, o.skin, 6 * lw, p);
-    stroke(ctx, EAR_IN, INK, 3 * lw, p);
-    stroke(ctx, EAR_IN_R, INK, 3 * lw, p);
+    stroke(ctx, EAR_IN, style.flat ? darken(o.skin, 0.22) : INK, 3 * lw, p);
+    stroke(ctx, EAR_IN_R, style.flat ? darken(o.skin, 0.22) : INK, 3 * lw, p);
   }
   if (o.headwear === 'ghutra') {
     // the back fall of the ghutra sits behind the face
@@ -375,7 +375,7 @@ export function drawHead(ctx: Ctx, o: HeadOpts): void {
     fill(ctx, CURLS_R, o.hair, p);
   }
   shade(ctx, 'M-16,54 C-26,78 -20,98 -8,102 L-2,96 C-12,86 -12,72 -8,54 Z', p);
-  stroke(ctx, 'M-14,94 C-6,106 6,106 14,94', INK, 4 * lw, p);
+  stroke(ctx, 'M-14,94 C-6,106 6,106 14,94', style.flat ? darken(o.skin, 0.3) : INK, 4 * lw, p);
   drawEye(ctx, o, 1);
   drawEye(ctx, o, -1);
   drawBrows(ctx, o);
@@ -394,7 +394,7 @@ export function drawHead(ctx: Ctx, o: HeadOpts): void {
         shade(ctx, KUMMA_SHADE, p);
         ctx.restore();
       }
-      stroke(ctx, KUMMA, INK, 6 * lw, p);
+      edge(ctx, KUMMA, 6 * lw, p);
       break;
     }
     case 'massar': {
@@ -428,12 +428,12 @@ export function drawHead(ctx: Ctx, o: HeadOpts): void {
         shade(ctx, 'M-256,-150 C-288,-236 -276,-330 -150,-368 C-232,-300 -250,-224 -236,-144 Z', p);
         ctx.restore();
       }
-      stroke(ctx, MASSAR, INK, 6 * lw, p);
+      edge(ctx, MASSAR, 6 * lw, p);
       // the twisted roll that finishes the wrap: a rope of cloth along the brow, drawn as a
       // thick outlined stroke so it reads as a rolled edge and not as a printed stripe
       {
         const roll = curve(MASSAR_ROLL);
-        stroke(ctx, roll, p?.sil ?? INK, 62, p);
+        stroke(ctx, roll, p?.sil ?? (style.flat ? darken(o.accent, 0.3) : INK), 62, p);
         stroke(ctx, roll, p?.sil ?? o.accent, 50, p);
         if (!p?.sil) {
           for (let i = 0; i <= 11; i++) {
@@ -449,7 +449,7 @@ export function drawHead(ctx: Ctx, o: HeadOpts): void {
         clipTo(ctx, MASSAR_KNOT);
         for (let i = 0; i < 4; i++) stroke(ctx, `M${206 + i * 8},${-186 + i * 34} C${272 + i * 8},${-174 + i * 32} ${298 + i * 4},${-132 + i * 28} ${280 + i * 2},${-94 + i * 26}`, i % 2 ? light : dark, 10, undefined, 0.6);
         ctx.restore();
-        stroke(ctx, MASSAR_KNOT, INK, 6 * lw, p);
+        edge(ctx, MASSAR_KNOT, 6 * lw, p);
       }
       break;
     }
@@ -479,7 +479,7 @@ export function drawHead(ctx: Ctx, o: HeadOpts): void {
         ctx.globalAlpha = 1;
       }
       ctx.restore();
-      if (!p?.sil) {
+      if (!p?.sil && !style.flat) {
         ctx.save();
         ctx.lineWidth = 6 * lw;
         ctx.strokeStyle = INK;
@@ -523,13 +523,15 @@ export function drawHead(ctx: Ctx, o: HeadOpts): void {
           stroke(ctx, 'M0,-256 C-156,-256 -246,-154 -250,-34 C-254,78 -232,176 -176,250', o.accent, 5);
         }
         ctx.restore();
-        ctx.save();
-        ctx.lineWidth = 6 * lw;
-        ctx.strokeStyle = INK;
-        ctx.lineJoin = 'round';
-        ctx.stroke(P(HOOD));
-        ctx.stroke(P(HOOD_HOLE));
-        ctx.restore();
+        if (!style.flat) {
+          ctx.save();
+          ctx.lineWidth = 6 * lw;
+          ctx.strokeStyle = INK;
+          ctx.lineJoin = 'round';
+          ctx.stroke(P(HOOD));
+          ctx.stroke(P(HOOD_HOLE));
+          ctx.restore();
+        }
       }
       break;
     }

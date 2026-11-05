@@ -1,7 +1,7 @@
 import { SKINS, isFemale, type Character } from '../../domain/types';
 import { circle, headwearFor, rig, sleeveColor, strokeLimb, wearColor, type CharacterDraw, type Limb, type Pose } from './body';
 import { kummaEmbroidery } from './head';
-import { INK, LINE, MOON, P, type Ctx, type Paint, cel, darken, fill, lighten, shade, stroke } from './paint';
+import { INK, LINE, MOON, P, type Ctx, type Paint, cel, darken, edge, fill, lighten, shade, stroke, style } from './paint';
 
 /**
  * Side (profile) view used for walking and running. Drawn facing right; facing left mirrors it.
@@ -41,7 +41,7 @@ function sideHead(ctx: Ctx, ch: Character, o: { skin: string; happy: boolean; se
   const wrapped = hw === 'hijab' || hw === 'lihaf' || hw === 'ghutra';
   if (!wrapped) {
     cel(ctx, EAR_S, o.skin, 6, p);
-    stroke(ctx, 'M-80,-6 C-92,10 -92,34 -78,48', INK, 3, p);
+    stroke(ctx, 'M-80,-6 C-92,10 -92,34 -78,48', style.flat ? darken(o.skin, 0.22) : INK, 3, p);
   }
   cel(ctx, FACE_S, o.skin, 6, p);
   shade(ctx, FACE_S_SHADE, p);
@@ -76,7 +76,7 @@ function sideHead(ctx: Ctx, ch: Character, o: { skin: string; happy: boolean; se
   fill(ctx, o.set ? 'M112,-82 C146,-92 186,-104 218,-112 L220,-98 C186,-88 148,-74 116,-68 Z' : 'M112,-96 C142,-112 188,-110 218,-90 L212,-78 C184,-96 144,-98 116,-84 Z', ch.hair, p);
   // mouth
   if (o.mouthOpen || o.happy) cel(ctx, 'M206,118 C214,140 232,142 240,122 C228,126 216,124 206,118 Z', '#3a1410', 3, p);
-  else stroke(ctx, 'M212,128 L236,124', INK, 5, p);
+  else stroke(ctx, 'M212,128 L236,124', style.flat ? darken(o.skin, 0.45) : INK, 5, p);
 
   switch (hw) {
     case 'kumma': {
@@ -91,7 +91,7 @@ function sideHead(ctx: Ctx, ch: Character, o: { skin: string; happy: boolean; se
         shade(ctx, KUMMA_S_SHADE, p);
         ctx.restore();
       }
-      stroke(ctx, KUMMA_S, INK, 6, p);
+      edge(ctx, KUMMA_S, 6, p);
       break;
     }
     case 'massar': {
@@ -127,13 +127,13 @@ function sideHead(ctx: Ctx, ch: Character, o: { skin: string; happy: boolean; se
         ctx.lineCap = 'round';
         ctx.restore();
       }
-      stroke(ctx, MASSAR_S, INK, 6, p);
+      edge(ctx, MASSAR_S, 6, p);
       // the twisted roll along the brow, an outlined rope of cloth
-      stroke(ctx, MASSAR_S_ROLL, p?.sil ?? INK, 60, p);
+      stroke(ctx, MASSAR_S_ROLL, p?.sil ?? (style.flat ? darken(ch.accent, 0.3) : INK), 60, p);
       stroke(ctx, MASSAR_S_ROLL, p?.sil ?? ch.accent, 48, p);
       if (!p?.sil) for (let i = -5; i <= 5; i++) stroke(ctx, `M${i * 44 - 12},${-128 - Math.abs(i) * 3} l22,-36`, dark, 6, undefined, 0.5);
       if (!p?.sil) {
-        stroke(ctx, MASSAR_S_KNOT, INK, 6, p);
+        edge(ctx, MASSAR_S_KNOT, 6, p);
         stroke(ctx, 'M-230,-150 C-264,-132 -272,-98 -258,-72', darken(ch.accent, 0.4), 6, undefined, 0.75);
       }
       break;
@@ -173,7 +173,7 @@ function sideHead(ctx: Ctx, ch: Character, o: { skin: string; happy: boolean; se
         }
       }
       ctx.restore();
-      if (!p?.sil) {
+      if (!p?.sil && !style.flat) {
         ctx.save();
         ctx.lineWidth = 6;
         ctx.strokeStyle = INK;
@@ -253,7 +253,7 @@ export function drawCharacterSide(ctx: Ctx, ch: Character, pose: Pose, gait: Sid
     ctx.ellipse(0.025 * H, 0, 0.05 * H, 0.016 * H, 0, 0, Math.PI * 2);
     ctx.fillStyle = paint?.sil ?? dark;
     ctx.fill();
-    if (!paint?.sil) {
+    if (!paint?.sil && !style.flat) {
       ctx.strokeStyle = INK;
       ctx.lineWidth = o * 0.7;
       ctx.stroke();
@@ -329,7 +329,7 @@ export function drawCharacterSide(ctx: Ctx, ch: Character, pose: Pose, gait: Sid
       const ty = top + 0.03 * H;
       const s = 0.00072 * H;
       const sw = Math.sin(ph) * 6 * s;
-      stroke(ctx, `M${n(tx)},${n(ty)} C${n(tx + 6 * s)},${n(ty + 20 * s)} ${n(tx + sw)},${n(ty + 40 * s)} ${n(tx + sw)},${n(ty + 50 * s)}`, INK, 8 * s, paint);
+      stroke(ctx, `M${n(tx)},${n(ty)} C${n(tx + 6 * s)},${n(ty + 20 * s)} ${n(tx + sw)},${n(ty + 40 * s)} ${n(tx + sw)},${n(ty + 50 * s)}`, style.flat ? darken(ch.color, 0.14) : INK, 8 * s, paint);
       stroke(ctx, `M${n(tx)},${n(ty)} C${n(tx + 6 * s)},${n(ty + 20 * s)} ${n(tx + sw)},${n(ty + 40 * s)} ${n(tx + sw)},${n(ty + 50 * s)}`, ch.color, 4 * s, paint);
       cel(ctx, `M${n(tx + sw)},${n(ty + 46 * s)} C${n(tx + sw + 14 * s)},${n(ty + 66 * s)} ${n(tx + sw + 12 * s)},${n(ty + 106 * s)} ${n(tx + sw - 2 * s)},${n(ty + 124 * s)} C${n(tx + sw - 16 * s)},${n(ty + 106 * s)} ${n(tx + sw - 16 * s)},${n(ty + 66 * s)} ${n(tx + sw)},${n(ty + 46 * s)} Z`, ch.color, 3 * s, paint);
       cel(ctx, `M${n(tx + sw - 2 * s)},${n(ty + 128 * s)} C${n(tx + sw + 10 * s)},${n(ty + 148 * s)} ${n(tx + sw + 16 * s)},${n(ty + 176 * s)} ${n(tx + sw + 18 * s)},${n(ty + 196 * s)} L${n(tx + sw - 22 * s)},${n(ty + 196 * s)} C${n(tx + sw - 20 * s)},${n(ty + 176 * s)} ${n(tx + sw - 14 * s)},${n(ty + 148 * s)} ${n(tx + sw - 2 * s)},${n(ty + 128 * s)} Z`, ch.color, 3 * s, paint);

@@ -2,7 +2,7 @@ import { SKINS, isFemale, isKid, type Character, type Expression, type HandShape
 import { drawHand } from './hand';
 import { drawHeld } from './held';
 import { drawHead, drawNeck, type Headwear } from './head';
-import { INK, PRACTICAL, LINE, type Ctx, type Paint, cel, darken, fill, lighten, shade, stroke } from './paint';
+import { INK, PRACTICAL, LINE, type Ctx, type Paint, cel, darken, edgeColor, edgeWidth, fill, lighten, shade, stroke, style } from './paint';
 
 /**
  * A character in body units: feet at the origin, up is negative y.
@@ -146,9 +146,9 @@ export const wearColor = (ch: Character): string => {
 };
 
 export const sleeveColor = (ch: Character): string => {
-  if (ch.outfit === 'school') return '#f6f3ee';
-  if (ch.outfit === 'labcoat') return '#f8f8f6';
-  return ch.color;
+  const base = ch.outfit === 'school' ? '#f6f3ee' : ch.outfit === 'labcoat' ? '#f8f8f6' : ch.color;
+  // without a black outline an arm would melt into the robe, so the sleeve takes a shade of its own
+  return style.flat ? darken(base, 0.05) : base;
 };
 
 const dir = (side: -1 | 1, a: number): [number, number] => [side * Math.sin(a), Math.cos(a)];
@@ -177,8 +177,8 @@ export function strokeLimb(ctx: Ctx, L: Limb, color: string, width: number, outl
   };
   if (!paint?.sil) {
     path();
-    ctx.strokeStyle = INK;
-    ctx.lineWidth = width + outline * 2;
+    ctx.strokeStyle = edgeColor(color);
+    ctx.lineWidth = width + edgeWidth(outline) * 2;
     ctx.stroke();
   }
   path();
@@ -193,8 +193,8 @@ export function circle(ctx: Ctx, x: number, y: number, r: number, color: string,
   ctx.fillStyle = paint?.sil ?? color;
   ctx.fill();
   if (!paint?.sil && outline > 0) {
-    ctx.strokeStyle = INK;
-    ctx.lineWidth = outline;
+    ctx.strokeStyle = edgeColor(color);
+    ctx.lineWidth = edgeWidth(outline);
     ctx.stroke();
   }
 }
@@ -270,8 +270,8 @@ export function drawCharacter(ctx: Ctx, ch: Character, pose: Pose, paint?: Paint
       ctx.fillStyle = paint?.sil ?? '#1d1d22';
       ctx.fill();
       if (!paint?.sil) {
-        ctx.strokeStyle = INK;
-        ctx.lineWidth = o;
+        ctx.strokeStyle = edgeColor('#1d1d22', 0.5);
+        ctx.lineWidth = edgeWidth(o);
         ctx.stroke();
       }
       ctx.restore();
@@ -290,8 +290,8 @@ export function drawCharacter(ctx: Ctx, ch: Character, pose: Pose, paint?: Paint
       ctx.fillStyle = paint?.sil ?? skin;
       ctx.fill();
       if (!paint?.sil) {
-        ctx.strokeStyle = INK;
-        ctx.lineWidth = o * 0.6;
+        ctx.strokeStyle = edgeColor(skin, 0.18);
+        ctx.lineWidth = edgeWidth(o * 0.6);
         ctx.stroke();
       }
     }
@@ -329,8 +329,8 @@ export function drawCharacter(ctx: Ctx, ch: Character, pose: Pose, paint?: Paint
     shade(ctx, robeShade(r, top, robeHemY, 1.08, sway), paint);
     // opening shows the shirt and tie
     cel(ctx, `M${n(-0.03 * H)},${n(top + 0.02 * H)} L${n(-0.02 * H)},${n(robeHemY)} L${n(0.02 * H)},${n(robeHemY)} L${n(0.03 * H)},${n(top + 0.02 * H)} Z`, garment, o * 0.8, paint);
-    stroke(ctx, `M${n(-0.11 * H)},${n(top + 0.24 * H)} L${n(-0.05 * H)},${n(top + 0.24 * H)}`, INK, o * 0.7, paint);
-    stroke(ctx, `M${n(0.05 * H)},${n(top + 0.36 * H)} L${n(0.11 * H)},${n(top + 0.36 * H)}`, INK, o * 0.7, paint);
+    stroke(ctx, `M${n(-0.11 * H)},${n(top + 0.24 * H)} L${n(-0.05 * H)},${n(top + 0.24 * H)}`, style.flat ? '#d8d4cc' : INK, o * 0.7, paint);
+    stroke(ctx, `M${n(0.05 * H)},${n(top + 0.36 * H)} L${n(0.11 * H)},${n(top + 0.36 * H)}`, style.flat ? '#d8d4cc' : INK, o * 0.7, paint);
   } else if (ch.outfit === 'casual' && !female) {
     const shirt = robePath(r, top, robeHemY, 0.98, 0);
     cel(ctx, shirt, garment, o, paint);
@@ -343,14 +343,14 @@ export function drawCharacter(ctx: Ctx, ch: Character, pose: Pose, paint?: Paint
     shade(ctx, robeShade(r, top, robeHemY, hemW, sway), paint);
     if (ch.outfit === 'dishdasha' || ch.outfit === 'massar' || ch.outfit === 'ghutra') {
       // embroidered round collar, placket, button and the white tassel
-      stroke(ctx, `M${n(-0.05 * H)},${n(top)} Q0,${n(top + 0.07 * H)} ${n(0.05 * H)},${n(top)}`, INK, o * 0.5, paint);
+      stroke(ctx, `M${n(-0.05 * H)},${n(top)} Q0,${n(top + 0.07 * H)} ${n(0.05 * H)},${n(top)}`, style.flat ? darken(garment, 0.14) : INK, o * 0.6, paint);
       cel(ctx, `M${n(-0.008 * H)},${n(top + 0.034 * H)} L${n(-0.008 * H)},${n(top + 0.2 * H)} L${n(0.008 * H)},${n(top + 0.2 * H)} L${n(0.008 * H)},${n(top + 0.034 * H)} Z`, garment, o * 0.45, paint);
       if (ch.outfit !== 'ghutra') {
         const tx = 0;
         const ty = top + 0.034 * H;
         const s = 0.00072 * H;
         const tas = `M${n(tx)},${n(ty)} C${n(tx - 20 * s)},${n(ty + 8 * s)} ${n(tx - 45 * s)},${n(ty + 22 * s)} ${n(tx - 55 * s)},${n(ty + 48 * s)}`;
-        stroke(ctx, tas, INK, 9 * s, paint);
+        stroke(ctx, tas, style.flat ? darken(garment, 0.14) : INK, 9 * s, paint);
         stroke(ctx, tas, garment, 4.5 * s, paint);
         cel(ctx, `M${n(tx - 55 * s)},${n(ty + 44 * s)} C${n(tx - 40 * s)},${n(ty + 64 * s)} ${n(tx - 42 * s)},${n(ty + 104 * s)} ${n(tx - 58 * s)},${n(ty + 122 * s)} C${n(tx - 72 * s)},${n(ty + 104 * s)} ${n(tx - 72 * s)},${n(ty + 64 * s)} ${n(tx - 55 * s)},${n(ty + 44 * s)} Z`, garment, 3 * s, paint);
         cel(ctx, `M${n(tx - 58 * s)},${n(ty + 128 * s)} C${n(tx - 46 * s)},${n(ty + 148 * s)} ${n(tx - 40 * s)},${n(ty + 176 * s)} ${n(tx - 38 * s)},${n(ty + 198 * s)} L${n(tx - 78 * s)},${n(ty + 198 * s)} C${n(tx - 76 * s)},${n(ty + 176 * s)} ${n(tx - 70 * s)},${n(ty + 148 * s)} ${n(tx - 58 * s)},${n(ty + 128 * s)} Z`, garment, 3 * s, paint);

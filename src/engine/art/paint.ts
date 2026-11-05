@@ -50,10 +50,52 @@ export const stroke = (ctx: Ctx, d: string, color: string, width: number, paint?
   ctx.globalAlpha = 1;
 };
 
-/** Fill then ink outline: the cel look. */
+const hexToRgb = (h: string): [number, number, number] => {
+  const n = parseInt(h.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+};
+
+/** Mix two hex colours; t = 0 gives a, t = 1 gives b. */
+export function mix(a: string, b: string, t: number): string {
+  const A = hexToRgb(a);
+  const B = hexToRgb(b);
+  const c = A.map((v, i) => Math.round(v + (B[i] - v) * t));
+  return `#${c.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+}
+
+export const lighten = (c: string, t: number) => mix(c, '#ffffff', t);
+export const darken = (c: string, t: number) => mix(c, '#000000', t);
+
+/**
+ * The drawing style for characters. Flat means no ink outline around a body, a garment or a
+ * hand: shapes are told apart by their own colour and by their shading, the way the approved
+ * reference artwork does it. Faces keep their features — eyes, brows, nose, mouth.
+ */
+export const style = { flat: true };
+
+/** The colour an edge takes: ink in the cel style, a whisper of the fill itself when flat. */
+export const edgeColor = (color: string, depth = 0.13) => (style.flat ? darken(color, depth) : INK);
+/** How thick that edge is: thinner when it is only there to keep shapes apart. */
+export const edgeWidth = (width: number) => (style.flat ? width * 0.55 : width);
+
+/**
+ * Fill, then the edge. In the cel style that edge is a black outline; in the flat style it is
+ * the same colour as the fill, only a shade deeper, so shapes stay apart without a drawn border.
+ */
 export const cel = (ctx: Ctx, d: string, color: string, width: number, paint?: Paint): void => {
   fill(ctx, d, color, paint);
-  if (!paint?.sil) stroke(ctx, d, INK, width, paint);
+  if (!paint?.sil) stroke(ctx, d, edgeColor(color), edgeWidth(width), paint);
+};
+
+/** An edge on its own, for a shape that was filled some other way. */
+export const edge = (ctx: Ctx, d: string, width: number, paint?: Paint, color = INK): void => {
+  if (!paint?.sil) stroke(ctx, d, edgeColor(color), edgeWidth(width), paint);
+};
+
+/** Fill plus a deeper edge: for small objects that must stay legible against any cloth. */
+export const solid = (ctx: Ctx, d: string, color: string, width: number, paint?: Paint): void => {
+  fill(ctx, d, color, paint);
+  if (!paint?.sil) stroke(ctx, d, style.flat ? darken(color, 0.3) : INK, width, paint);
 };
 
 /** Hard-edged shadow shape: ink at 20 %. */
@@ -81,22 +123,6 @@ export function hash(s: string): number {
   }
   return h >>> 0;
 }
-
-const hexToRgb = (h: string): [number, number, number] => {
-  const n = parseInt(h.slice(1), 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-};
-
-/** Mix two hex colours; t = 0 gives a, t = 1 gives b. */
-export function mix(a: string, b: string, t: number): string {
-  const A = hexToRgb(a);
-  const B = hexToRgb(b);
-  const c = A.map((v, i) => Math.round(v + (B[i] - v) * t));
-  return `#${c.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
-}
-
-export const lighten = (c: string, t: number) => mix(c, '#ffffff', t);
-export const darken = (c: string, t: number) => mix(c, '#000000', t);
 
 /** Relative luminance, used to pick readable outline colours. */
 export function luma(c: string): number {
