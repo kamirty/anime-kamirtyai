@@ -73,23 +73,26 @@ export const darken = (c: string, t: number) => mix(c, '#000000', t);
  */
 export const style = { flat: true };
 
-/** The colour an edge takes: ink in the cel style, a whisper of the fill itself when flat. */
-export const edgeColor = (color: string, depth = 0.13) => (style.flat ? darken(color, depth) : INK);
-/** How thick that edge is: thinner when it is only there to keep shapes apart. */
-export const edgeWidth = (width: number) => (style.flat ? width * 0.55 : width);
-
 /**
- * Fill, then the edge. In the cel style that edge is a black outline; in the flat style it is
- * the same colour as the fill, only a shade deeper, so shapes stay apart without a drawn border.
+ * Fill, and nothing else in the flat style: a character carries no drawn border at all, not
+ * even a pale one. Shapes are told apart by their own tone and by the shadows cast on them.
  */
 export const cel = (ctx: Ctx, d: string, color: string, width: number, paint?: Paint): void => {
   fill(ctx, d, color, paint);
-  if (!paint?.sil) stroke(ctx, d, edgeColor(color), edgeWidth(width), paint);
+  if (!paint?.sil && !style.flat) stroke(ctx, d, INK, width, paint);
 };
 
-/** An edge on its own, for a shape that was filled some other way. */
+/** An outline on its own, for a shape that was filled some other way. */
 export const edge = (ctx: Ctx, d: string, width: number, paint?: Paint, color = INK): void => {
-  if (!paint?.sil) stroke(ctx, d, edgeColor(color), edgeWidth(width), paint);
+  if (!paint?.sil && !style.flat) stroke(ctx, d, color, width, paint);
+};
+
+/** A soft shadow of a shape, cast a little down and across: the flat way to lift one plane off another. */
+export const castShadow = (ctx: Ctx, d: string, dx: number, dy: number, alpha = 0.12): void => {
+  ctx.save();
+  ctx.translate(dx, dy);
+  fill(ctx, d, INK, undefined, alpha);
+  ctx.restore();
 };
 
 /** Fill plus a deeper edge: for small objects that must stay legible against any cloth. */

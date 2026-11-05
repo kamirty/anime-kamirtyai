@@ -2,7 +2,7 @@ import { SKINS, isFemale, isKid, type Character, type Expression, type HandShape
 import { drawHand } from './hand';
 import { drawHeld } from './held';
 import { drawHead, drawNeck, type Headwear } from './head';
-import { INK, PRACTICAL, LINE, type Ctx, type Paint, cel, darken, edgeColor, edgeWidth, fill, lighten, shade, stroke, style } from './paint';
+import { INK, PRACTICAL, LINE, type Ctx, type Paint, cel, darken, fill, lighten, shade, stroke, style } from './paint';
 
 /**
  * A character in body units: feet at the origin, up is negative y.
@@ -148,7 +148,7 @@ export const wearColor = (ch: Character): string => {
 export const sleeveColor = (ch: Character): string => {
   const base = ch.outfit === 'school' ? '#f6f3ee' : ch.outfit === 'labcoat' ? '#f8f8f6' : ch.color;
   // without a black outline an arm would melt into the robe, so the sleeve takes a shade of its own
-  return style.flat ? darken(base, 0.05) : base;
+  return style.flat ? darken(base, 0.07) : base;
 };
 
 const dir = (side: -1 | 1, a: number): [number, number] => [side * Math.sin(a), Math.cos(a)];
@@ -176,10 +176,22 @@ export function strokeLimb(ctx: Ctx, L: Limb, color: string, width: number, outl
     ctx.lineTo(L.h[0], L.h[1]);
   };
   if (!paint?.sil) {
-    path();
-    ctx.strokeStyle = edgeColor(color);
-    ctx.lineWidth = width + edgeWidth(outline) * 2;
-    ctx.stroke();
+    if (style.flat) {
+      // the arm casts a soft shadow on whatever it lies over, which is what separates them
+      ctx.save();
+      ctx.translate(outline * 1.6, outline * 2.2);
+      path();
+      ctx.strokeStyle = INK;
+      ctx.globalAlpha = 0.1;
+      ctx.lineWidth = width;
+      ctx.stroke();
+      ctx.restore();
+    } else {
+      path();
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = width + outline * 2;
+      ctx.stroke();
+    }
   }
   path();
   ctx.strokeStyle = paint?.sil ?? color;
@@ -192,9 +204,9 @@ export function circle(ctx: Ctx, x: number, y: number, r: number, color: string,
   ctx.arc(x, y, r, 0, Math.PI * 2);
   ctx.fillStyle = paint?.sil ?? color;
   ctx.fill();
-  if (!paint?.sil && outline > 0) {
-    ctx.strokeStyle = edgeColor(color);
-    ctx.lineWidth = edgeWidth(outline);
+  if (!paint?.sil && outline > 0 && !style.flat) {
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = outline;
     ctx.stroke();
   }
 }
@@ -269,9 +281,9 @@ export function drawCharacter(ctx: Ctx, ch: Character, pose: Pose, paint?: Paint
       ctx.ellipse(Lb.h[0] + side * 0.012 * H, Lb.h[1] + 0.008 * H, 0.05 * H, 0.022 * H, 0, 0, Math.PI * 2);
       ctx.fillStyle = paint?.sil ?? '#1d1d22';
       ctx.fill();
-      if (!paint?.sil) {
-        ctx.strokeStyle = edgeColor('#1d1d22', 0.5);
-        ctx.lineWidth = edgeWidth(o);
+      if (!paint?.sil && !style.flat) {
+        ctx.strokeStyle = INK;
+        ctx.lineWidth = o;
         ctx.stroke();
       }
       ctx.restore();
@@ -289,9 +301,9 @@ export function drawCharacter(ctx: Ctx, ch: Character, pose: Pose, paint?: Paint
       ctx.ellipse(fx, fy - 0.016 * H, 0.036 * H, 0.014 * H, 0, Math.PI, Math.PI * 2);
       ctx.fillStyle = paint?.sil ?? skin;
       ctx.fill();
-      if (!paint?.sil) {
-        ctx.strokeStyle = edgeColor(skin, 0.18);
-        ctx.lineWidth = edgeWidth(o * 0.6);
+      if (!paint?.sil && !style.flat) {
+        ctx.strokeStyle = INK;
+        ctx.lineWidth = o * 0.6;
         ctx.stroke();
       }
     }

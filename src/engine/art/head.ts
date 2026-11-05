@@ -433,8 +433,8 @@ export function drawHead(ctx: Ctx, o: HeadOpts): void {
       // thick outlined stroke so it reads as a rolled edge and not as a printed stripe
       {
         const roll = curve(MASSAR_ROLL);
-        stroke(ctx, roll, p?.sil ?? (style.flat ? darken(o.accent, 0.3) : INK), 62, p);
-        stroke(ctx, roll, p?.sil ?? o.accent, 50, p);
+        if (!style.flat) stroke(ctx, roll, p?.sil ?? INK, 62, p);
+        stroke(ctx, roll, p?.sil ?? (style.flat ? darken(o.accent, 0.1) : o.accent), 54, p);
         if (!p?.sil) {
           for (let i = 0; i <= 11; i++) {
             const [x, y] = bez(MASSAR_ROLL, i / 11);

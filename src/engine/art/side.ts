@@ -129,8 +129,8 @@ function sideHead(ctx: Ctx, ch: Character, o: { skin: string; happy: boolean; se
       }
       edge(ctx, MASSAR_S, 6, p);
       // the twisted roll along the brow, an outlined rope of cloth
-      stroke(ctx, MASSAR_S_ROLL, p?.sil ?? (style.flat ? darken(ch.accent, 0.3) : INK), 60, p);
-      stroke(ctx, MASSAR_S_ROLL, p?.sil ?? ch.accent, 48, p);
+      if (!style.flat) stroke(ctx, MASSAR_S_ROLL, p?.sil ?? INK, 60, p);
+      stroke(ctx, MASSAR_S_ROLL, p?.sil ?? (style.flat ? darken(ch.accent, 0.1) : ch.accent), 52, p);
       if (!p?.sil) for (let i = -5; i <= 5; i++) stroke(ctx, `M${i * 44 - 12},${-128 - Math.abs(i) * 3} l22,-36`, dark, 6, undefined, 0.5);
       if (!p?.sil) {
         edge(ctx, MASSAR_S_KNOT, 6, p);

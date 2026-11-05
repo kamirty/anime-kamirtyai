@@ -1,5 +1,5 @@
 import type { HandShape } from '../../domain/types';
-import { INK, type Ctx, type Paint, darken, style } from './paint';
+import { INK, type Ctx, type Paint, style } from './paint';
 
 /**
  * The hand, turned along the forearm.
@@ -17,15 +17,16 @@ export function drawHand(ctx: Ctx, x: number, y: number, angle: number, shape: H
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
   const fill = paint?.sil ?? skin;
-  // in the flat style fingers are told apart by a soft shade of the skin, never by a black line
-  const ink = paint?.sil ?? (style.flat ? darken(skin, 0.14) : INK);
+  // flat hands carry no line at all; the fingers read by their own silhouette
+  const ink = paint?.sil ?? INK;
+  const lined = !style.flat || !!paint?.sil;
 
   const blob = (cx: number, cy: number, rx: number, ry: number, rot = 0) => {
     ctx.beginPath();
     ctx.ellipse(cx, cy, rx, ry, rot, 0, Math.PI * 2);
     ctx.fillStyle = fill;
     ctx.fill();
-    if (!paint?.sil) {
+    if (lined) {
       ctx.strokeStyle = ink;
       ctx.lineWidth = o;
       ctx.stroke();
@@ -35,7 +36,7 @@ export function drawHand(ctx: Ctx, x: number, y: number, angle: number, shape: H
     ctx.beginPath();
     ctx.moveTo(fromX, fromY);
     ctx.lineTo(toX, toY);
-    if (!paint?.sil) {
+    if (lined) {
       ctx.strokeStyle = ink;
       ctx.lineWidth = w + o * 2;
       ctx.stroke();
@@ -48,7 +49,7 @@ export function drawHand(ctx: Ctx, x: number, y: number, angle: number, shape: H
   switch (shape) {
     case 'fist': {
       blob(u * 0.35, 0, u * 1.15, u * 1.05);
-      if (!paint?.sil) {
+      if (lined) {
         ctx.strokeStyle = ink;
         ctx.lineWidth = o * 0.7;
         for (let i = -1; i <= 1; i++) {
@@ -77,7 +78,7 @@ export function drawHand(ctx: Ctx, x: number, y: number, angle: number, shape: H
       ctx.closePath();
       ctx.fillStyle = fill;
       ctx.fill();
-      if (!paint?.sil) {
+      if (lined) {
         ctx.strokeStyle = ink;
         ctx.lineWidth = o;
         ctx.stroke();
@@ -94,7 +95,7 @@ export function drawHand(ctx: Ctx, x: number, y: number, angle: number, shape: H
     case 'grip': {
       // curled around something
       blob(u * 0.3, 0, u * 1.1, u * 0.95);
-      if (!paint?.sil) {
+      if (lined) {
         ctx.strokeStyle = ink;
         ctx.lineWidth = o * 0.8;
         ctx.beginPath();
