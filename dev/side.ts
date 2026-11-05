@@ -7,7 +7,7 @@ import { newCharacter, parseProject } from '../src/domain/sanitize';
   const cast = [
     { ...newCharacter('boy', 'dishdasha', 'سالم'), id: 'b' },
     { ...newCharacter('girl', 'school', 'مريم'), id: 'g' },
-    { ...newCharacter('man', 'ghutra', 'خالد'), id: 'm' },
+    { ...newCharacter('man', 'massar', 'خالد'), id: 'm' },
     { ...newCharacter('woman', 'omaniDress', 'أم'), id: 'w' },
     { ...newCharacter('boy', 'casual', 'أحمد'), id: 'k' },
     { ...newCharacter('man', 'massar', 'جد'), id: 'j' },

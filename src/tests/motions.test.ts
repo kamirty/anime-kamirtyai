@@ -1,14 +1,32 @@
 import { describe, expect, it } from 'vitest';
-import { MOTIONS, applyMotion } from '../engine/motions';
+import { MOTIONS, MOTION_CATEGORIES, applyMotion } from '../engine/motions';
+import { AT, armTo, handAt } from '../engine/art/reach';
 import { describeToProject } from '../engine/parser/describe';
 import { parseProject } from '../domain/sanitize';
 import { renderFrame } from '../engine/renderer/renderFrame';
 import { poseAt } from '../engine/art/poses';
 
 describe('motion library', () => {
-  it('has exactly 50 motions with unique ids', () => {
-    expect(MOTIONS).toHaveLength(50);
-    expect(new Set(MOTIONS.map((m) => m.id)).size).toBe(50);
+  it('has exactly 100 motions with unique ids in known categories', () => {
+    expect(MOTIONS).toHaveLength(100);
+    expect(new Set(MOTIONS.map((m) => m.id)).size).toBe(100);
+    const cats = new Set(MOTION_CATEGORIES.map((c) => c.id));
+    for (const m of MOTIONS) expect(cats.has(m.cat)).toBe(true);
+    // every category is worth opening
+    for (const c of MOTION_CATEGORIES) expect(MOTIONS.filter((m) => m.cat === c.id).length).toBeGreaterThan(8);
+  });
+  it('puts the hand where the pose asks, on both arms', () => {
+    for (const [out, down] of [
+      [AT.shoulder - 0.1, AT.chest],
+      [0.02, AT.chin],
+      [0.2, AT.waist],
+      [-0.05, AT.eye],
+      [0.06, AT.overhead],
+      [0.09, AT.hip],
+    ]) {
+      const got = handAt(armTo(out, down));
+      expect(Math.hypot(got.out - out, got.down - down)).toBeLessThan(0.001);
+    }
   });
   it('changes only motion: place, characters, outfits, text and effects stay', () => {
     const { project } = describeToProject('ولد بالدشداشة في المزرعة صباحاً يقول «مرحبا» ثم تظهر عبارة أهلاً بكم');
@@ -27,6 +45,7 @@ describe('motion library', () => {
       // survives a save/load round trip
       const again = parseProject(JSON.parse(JSON.stringify(next)));
       expect(again.shots[idx].actors.map((x) => x.action)).toEqual(b.actors.map((x) => x.action));
+      expect(again.shots[idx].actors.map((x) => x.hold)).toEqual(b.actors.map((x) => x.hold));
     }
   });
   it('every motion poses without errors over a whole shot', () => {

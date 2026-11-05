@@ -45,7 +45,38 @@ const HOOD_HOLE = 'M0,-222 C138,-222 214,-138 218,-34 C222,70 200,160 150,225 C1
 const HOOD_SHADE = 'M-314,-60 C-314,110 -306,300 -350,580 L-266,580 C-266,290 -272,110 -266,-60 C-262,-200 -194,-306 -110,-352 C-222,-332 -314,-236 -314,-60 Z';
 const GHUTRA = 'M0,-362 C190,-362 302,-240 306,-70 C310,100 332,262 384,410 L262,440 C226,320 212,220 206,150 L-206,150 C-212,220 -226,320 -262,440 L-384,410 C-332,262 -310,100 -306,-70 C-302,-240 -190,-362 0,-362 Z';
 const GHUTRA_HOLE = 'M0,-232 C140,-232 216,-142 220,-40 C224,60 216,140 206,150 L-206,150 C-216,140 -224,60 -220,-40 C-216,-142 -140,-232 0,-232 Z';
-const MASSAR = 'M-252,-118 C-268,-232 -206,-352 0,-362 C206,-352 268,-232 252,-118 Q0,-88 -252,-118 Z';
+/**
+ * The Omani massar: a wrapped turban, not a dome. It sits low over the brow, overhangs the
+ * head at the sides, carries a printed border along the front of the wrap, is finished by a
+ * twisted roll at the brim, and ends in the tucked corner that juts out above one ear.
+ */
+const MASSAR =
+  'M-256,-150 C-288,-236 -276,-330 -150,-368 C-30,-398 170,-382 246,-300 C276,-262 278,-198 262,-154 C190,-128 60,-120 -40,-124 C-140,-130 -220,-140 -256,-150 Z';
+/** Centre line of the twisted last fold that finishes the wrap, just above the brow. */
+const MASSAR_ROLL: [number, number][] = [
+  [-244, -174],
+  [-150, -152],
+  [60, -148],
+  [250, -180],
+];
+/** Centre line of the printed border band across the front of the wrap. */
+const MASSAR_BAND: [number, number][] = [
+  [-250, -192],
+  [-120, -330],
+  [140, -340],
+  [258, -214],
+];
+/** The tucked corner, a roll of cloth above the ear. */
+const MASSAR_KNOT = 'M224,-196 C296,-186 318,-124 292,-80 C268,-40 206,-52 210,-98 C220,-134 234,-162 224,-196 Z';
+
+/** A point on a Bézier of any degree, for laying motifs along a curve. */
+function bez(pts: [number, number][], t: number): [number, number] {
+  let p = pts;
+  while (p.length > 1) p = p.slice(1).map((q, i) => [p[i][0] + (q[0] - p[i][0]) * t, p[i][1] + (q[1] - p[i][1]) * t] as [number, number]);
+  return p[0];
+}
+
+const curve = (pts: [number, number][]) => `M${pts[0][0]},${pts[0][1]} ${pts.length === 4 ? 'C' : 'Q'}${pts.slice(1).map((q) => `${q[0]},${q[1]}`).join(' ')}`;
 
 const EYE_O = 'M38,-20 C50,-60 140,-62 152,-20 C150,18 128,40 95,40 C62,40 40,18 38,-20 Z';
 const EYE_N = 'M38,-6 C56,-36 136,-40 152,-8 C150,22 128,40 95,40 C62,40 40,22 38,-6 Z';
@@ -367,21 +398,59 @@ export function drawHead(ctx: Ctx, o: HeadOpts): void {
       break;
     }
     case 'massar': {
+      const dark = darken(o.accent, 0.32);
+      const light = lighten(o.accent, 0.3);
       cel(ctx, MASSAR, o.accent, 6 * lw, p);
       if (!p?.sil) {
         clipTo(ctx, MASSAR);
-        const light = lighten(o.accent, 0.35);
-        const dark = darken(o.accent, 0.3);
-        for (let i = -6; i <= 6; i++) {
-          const x = i * 46;
-          stroke(ctx, `M${x - 120},-100 C${x - 40},-200 ${x + 40},-280 ${x + 140},-380`, i % 2 ? light : dark, 14);
+        // the folds of the cloth, wrapping up and across the head
+        for (let i = -6; i <= 7; i++) {
+          const x = i * 54;
+          stroke(ctx, `M${x - 200},-96 C${x - 100},-200 ${x - 20},-286 ${x + 110},-392`, i % 2 ? light : dark, i % 2 ? 13 : 8, undefined, 0.42);
         }
-        for (let i = 0; i < 5; i++) stroke(ctx, `M-260,${-130 - i * 46} C-120,${-160 - i * 46} 120,${-160 - i * 46} 260,${-130 - i * 46}`, '#f6f3ee', 4, undefined, 0.55);
+        // the printed border of the cloth, laid along the front of the wrap
+        ctx.lineCap = 'butt';
+        stroke(ctx, curve(MASSAR_BAND), dark, 92, undefined, 0.95);
+        for (let i = 0; i <= 13; i++) {
+          const t = i / 13;
+          const [x, y] = bez(MASSAR_BAND, t);
+          const [x2, y2] = bez(MASSAR_BAND, Math.min(1, t + 0.02));
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.rotate(Math.atan2(y2 - y, x2 - x));
+          // the woven motif of a kashmir border: a curled leaf between two rules
+          fill(ctx, 'M-14,-18 C4,-28 18,-12 10,4 C2,18 -14,14 -14,-18 Z', light, undefined, 0.9);
+          fill(ctx, 'M-17,18 L17,18 L17,26 L-17,26 Z', light, undefined, 0.7);
+          fill(ctx, 'M-17,-36 L17,-36 L17,-29 L-17,-29 Z', light, undefined, 0.55);
+          ctx.restore();
+        }
+        ctx.lineCap = 'round';
+        shade(ctx, 'M-256,-150 C-288,-236 -276,-330 -150,-368 C-232,-300 -250,-224 -236,-144 Z', p);
         ctx.restore();
       }
-      shade(ctx, 'M-252,-118 C-268,-232 -206,-352 -40,-362 C-160,-330 -200,-230 -196,-110 Z', p);
-      cel(ctx, 'M236,-170 C290,-150 300,-80 276,-20 L250,-34 C266,-80 260,-130 226,-146 Z', darken(o.accent, 0.1), 5 * lw, p);
       stroke(ctx, MASSAR, INK, 6 * lw, p);
+      // the twisted roll that finishes the wrap: a rope of cloth along the brow, drawn as a
+      // thick outlined stroke so it reads as a rolled edge and not as a printed stripe
+      {
+        const roll = curve(MASSAR_ROLL);
+        stroke(ctx, roll, p?.sil ?? INK, 62, p);
+        stroke(ctx, roll, p?.sil ?? o.accent, 50, p);
+        if (!p?.sil) {
+          for (let i = 0; i <= 11; i++) {
+            const [x, y] = bez(MASSAR_ROLL, i / 11);
+            stroke(ctx, `M${x - 14},${y + 20} L${x + 10},${y - 20}`, dark, 6, undefined, 0.5);
+          }
+          stroke(ctx, curve(MASSAR_ROLL.map(([x, y]) => [x, y - 13] as [number, number])), light, 8, undefined, 0.5);
+        }
+      }
+      // the tucked corner, a roll of cloth folded over the brim above the ear
+      cel(ctx, MASSAR_KNOT, darken(o.accent, 0.14), 6 * lw, p);
+      if (!p?.sil) {
+        clipTo(ctx, MASSAR_KNOT);
+        for (let i = 0; i < 4; i++) stroke(ctx, `M${206 + i * 8},${-186 + i * 34} C${272 + i * 8},${-174 + i * 32} ${298 + i * 4},${-132 + i * 28} ${280 + i * 2},${-94 + i * 26}`, i % 2 ? light : dark, 10, undefined, 0.6);
+        ctx.restore();
+        stroke(ctx, MASSAR_KNOT, INK, 6 * lw, p);
+      }
       break;
     }
     case 'ghutra': {

@@ -4,6 +4,7 @@ import {
   CAMERAS,
   EFFECTS,
   EXPRESSIONS,
+  HELD,
   KINDS,
   MAX_ACTORS_PER_SHOT,
   MAX_CAST,
@@ -25,6 +26,7 @@ import {
   type CharKind,
   type Character,
   type CustomProp,
+  type HeldProp,
   type Project,
   type PropMotion,
   type PropPlacement,
@@ -145,6 +147,7 @@ function fixActor(v: unknown, castIds: string[]): Actor | null {
   const action = oneOf<ActionId>(v.action, ACTIONS, 'stand');
   const a: Actor = { cast, action, expression: oneOf(v.expression, EXPRESSIONS, 'calm'), x: num(v.x, 0.05, 0.95, 0.5) };
   if (action === 'walk' || action === 'run') a.to = num(v.to, 0.05, 0.95, a.x < 0.5 ? 0.7 : 0.3);
+  if (typeof v.hold === 'string' && (HELD as readonly string[]).includes(v.hold)) a.hold = v.hold as HeldProp;
   if (isObj(v.rig)) {
     const from = fixRig(v.rig.from);
     if (from) {

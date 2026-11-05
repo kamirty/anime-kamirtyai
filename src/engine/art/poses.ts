@@ -1,6 +1,7 @@
 import type { Actor, Expression } from '../../domain/types';
 import { restPose, type Pose } from './body';
 import { clamp, easeInOut, easeOut, hash, onTwos } from './paint';
+import { AT, MID, armTo, bothTo } from './reach';
 
 /**
  * Actions as drawings over time. Acting is on twos (each drawing held 2 frames), holds are real holds,
@@ -51,6 +52,7 @@ export function poseAt(actor: Actor, t: number, duration: number, seed0: string,
   const p = restPose(actor.expression);
   p.gaze = gazeFor(actor.expression, seed);
   p.blink = blinkAt(t, seed);
+  if (actor.hold) p.hold = actor.hold;
   let x = actor.x;
   // facing: point toward the frame centre
   const toCentre: 1 | -1 = actor.x > 0.5 ? -1 : 1;
@@ -112,9 +114,11 @@ export function poseAt(actor: Actor, t: number, duration: number, seed0: string,
     }
     case 'wave': {
       const cyc = Math.floor((t * 24) / 4) % 4;
-      const bends = [-0.55, -0.15, 0.3, -0.15];
-      if (toCentre > 0) p.armR = [2.55, bends[cyc]];
-      else p.armL = [2.55, bends[cyc]];
+      // the hand swings beside the head, elbow up
+      const outs = [0.08, 0.13, 0.18, 0.13];
+      const hand = armTo(outs[cyc], AT.eye - 0.05);
+      if (toCentre > 0) p.armR = hand;
+      else p.armL = hand;
       if (actor.expression === 'calm') p.expression = 'look';
       p.gaze = { x: 0, y: 0 };
       p.headTilt = 0.04 * toCentre;
@@ -122,47 +126,56 @@ export function poseAt(actor: Actor, t: number, duration: number, seed0: string,
     }
     case 'talk': {
       const cyc = Math.floor((t * 24) / 6) % 4;
-      p.armR = [0.55 + (cyc % 2) * 0.12, 1.1 - (cyc === 2 ? 0.25 : 0)];
-      p.armL = [0.3, 0.5 + (cyc === 3 ? 0.2 : 0)];
+      // open hands in front of the body, not thrown out to the sides
+      p.armR = armTo(0.02 + (cyc % 2) * 0.02, AT.chest + (cyc === 2 ? 0.03 : 0));
+      p.armL = armTo(0.0, AT.waist + (cyc === 3 ? -0.04 : 0));
       p.gaze = { x: 0, y: 0 };
       break;
     }
     case 'point': {
+      // the arm reaches out toward the middle of the frame, a little below shoulder height
+      const hand = armTo(0.26, AT.shoulder + 0.05);
       if (toCentre > 0) {
-        p.armR = [1.5, 0.02];
+        p.armR = hand;
         p.gaze = { x: 14, y: -2 };
       } else {
-        p.armL = [1.5, 0.02];
+        p.armL = hand;
         p.gaze = { x: -14, y: -2 };
       }
       p.headTilt = 0.03 * toCentre;
       break;
     }
     case 'greet': {
-      p.armR = [-0.3, 2.0];
+      // palm flat on the chest, over the heart
+      p.armR = armTo(MID + 0.02, AT.chest);
+      p.armL = armTo(0.03, AT.hip);
       p.headTilt = 0.06;
       if (actor.expression === 'calm') p.expression = 'happy';
       break;
     }
     case 'think': {
-      p.armR = [-0.15, 2.55];
-      p.armL = [-0.42, 1.25];
+      // right hand at the chin, left hand under the right elbow
+      p.armR = armTo(MID + 0.055, AT.chin + 0.01);
+      p.armL = armTo(MID + 0.06, AT.belly);
       p.gaze = { x: 10, y: -14 };
       p.headTilt = -0.05;
       break;
     }
     case 'clap': {
+      // both hands meet on the midline, then open a little
       const together = Math.floor((t * 24) / 3) % 2 === 0;
-      p.armL = [-0.15, together ? 1.75 : 1.35];
-      p.armR = [-0.15, together ? 1.75 : 1.35];
+      const j = bothTo(together ? MID : MID + 0.05, AT.chest + 0.01);
+      p.armL = j.armL;
+      p.armR = j.armR;
       if (actor.expression === 'calm') p.expression = 'happy';
       p.mouthOpen = true;
       break;
     }
     case 'cheer': {
       const cyc = Math.floor((t * 24) / 4) % 3;
-      p.armL = [2.75, 0.18];
-      p.armR = [2.75, 0.18];
+      const j = bothTo(0.055, AT.overhead + 0.02);
+      p.armL = j.armL;
+      p.armR = j.armR;
       p.dy = cyc === 1 ? -55 : cyc === 2 ? -20 : 0;
       if (actor.expression === 'calm') p.expression = 'happy';
       p.mouthOpen = true;
@@ -173,8 +186,8 @@ export function poseAt(actor: Actor, t: number, duration: number, seed0: string,
       if (tt < JUMP.crouch) break;
       if (tt < JUMP.launch) {
         p.crouch = 0.7;
-        p.armL = [-0.25, 0.4];
-        p.armR = [-0.25, 0.4];
+        p.armL = armTo(0.06, AT.hip + 0.02);
+        p.armR = armTo(0.06, AT.hip + 0.02);
         break;
       }
       if (tt < JUMP.air) {
@@ -227,14 +240,14 @@ function powerPose(actor: Actor, t: number, x: number): PoseResult {
   p.gaze = { x: 0, y: -12 };
   const st: PowerState = { phase: 'ready', wave: 0, flash: 0, hit: false, since: 0 };
   if (t < POWER.crouch) {
-    p.armL = [-0.35, 1.55];
-    p.armR = [-0.35, 1.55];
+    p.armL = armTo(MID + 0.05, AT.belly);
+    p.armR = armTo(MID + 0.05, AT.belly);
     p.orb = { x: 0, y: -560, r: 22 + 10 * Math.sin(t * 24 * 0.9) };
     st.phase = 'ready';
   } else if (t < POWER.launch) {
     p.crouch = 0.8;
-    p.armL = [-0.1, 0.6];
-    p.armR = [-0.1, 0.6];
+    p.armL = armTo(0.05, AT.hip);
+    p.armR = armTo(0.05, AT.hip);
     p.orb = { x: 0, y: -470, r: 30 };
     st.phase = 'crouch';
   } else if (t < POWER.rise) {
@@ -278,8 +291,8 @@ function powerPose(actor: Actor, t: number, x: number): PoseResult {
     st.hit = true;
   } else {
     p.crouch = 0.6;
-    p.armL = [0.5, 0.3];
-    p.armR = [0.25, 1.6];
+    p.armL = armTo(0.1, AT.hip + 0.02);
+    p.armR = armTo(0.02, AT.hip + 0.06);
     p.gaze = { x: 0, y: -16 };
     p.headTilt = -0.05;
     st.phase = 'land';

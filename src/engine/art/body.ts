@@ -1,4 +1,5 @@
-import { SKINS, isFemale, isKid, type Character, type Expression } from '../../domain/types';
+import { SKINS, isFemale, isKid, type Character, type Expression, type HeldProp } from '../../domain/types';
+import { drawHeld } from './held';
 import { drawHead, drawNeck, type Headwear } from './head';
 import { INK, PRACTICAL, LINE, type Ctx, type Paint, cel, darken, fill, lighten, shade, stroke } from './paint';
 
@@ -81,6 +82,8 @@ export interface Pose {
   side?: { facing: 1 | -1; phase: number; run: boolean };
   /** Energy orb in body units (power move). */
   orb?: { x: number; y: number; r: number };
+  /** A small object held in the hands. */
+  hold?: HeldProp;
 }
 
 export const restPose = (expression: Expression = 'calm'): Pose => ({
@@ -230,7 +233,11 @@ export function drawCharacter(ctx: Ctx, ch: Character, pose: Pose, paint?: Paint
   const skin = SKINS[Math.max(0, Math.min(3, ch.skin))];
   const o = 0.0055 * H; // outline width in body units
   const female = isFemale(ch.kind);
-  const drop = pose.crouch * 0.13 * H;
+  // a light crouch dips a little; a deep one really sits down
+  const drop = (pose.crouch <= 0.5 ? pose.crouch * 0.13 : 0.065 + (pose.crouch - 0.5) * 0.42) * H;
+  // leaning shears the body above the ground instead of turning the whole figure on its feet,
+  // so the hem stays planted and the character bends rather than tipping over like a plank
+  const shear = pose.lean * 0.5;
   const top = r.sY + drop;
   const legsVisible = ch.outfit === 'casual' ? !female : ch.outfit === 'labcoat';
   const robeHemY = ch.outfit === 'labcoat' ? top + 0.5 * H : ch.outfit === 'omaniDress' ? -0.17 * H : ch.outfit === 'casual' && !female ? top + 0.33 * H : r.hemY;
@@ -240,11 +247,7 @@ export function drawCharacter(ctx: Ctx, ch: Character, pose: Pose, paint?: Paint
   ctx.save();
   ctx.translate(0, pose.dy);
   if (pose.stretch !== 1) ctx.scale(1 / Math.sqrt(pose.stretch), pose.stretch);
-  if (pose.lean) {
-    ctx.translate(0, r.hipY);
-    ctx.rotate(pose.lean);
-    ctx.translate(0, -r.hipY);
-  }
+  if (shear) ctx.transform(1, 0, -shear, 1, 0, 0);
 
   // ── legs / feet ──
   const hip = r.hipY + drop;
@@ -390,6 +393,8 @@ export function drawCharacter(ctx: Ctx, ch: Character, pose: Pose, paint?: Paint
     circle(ctx, A.h[0], A.h[1], r.hand, skin, o * 0.8, paint);
   }
 
+  if (pose.hold) drawHeld(ctx, pose.hold, [AL.h, AR.h], H, ch.accent, paint);
+
   // ── energy orb (power move) ──
   if (pose.orb && !paint?.sil) {
     ctx.save();
@@ -404,7 +409,9 @@ export function drawCharacter(ctx: Ctx, ch: Character, pose: Pose, paint?: Paint
   // ── head ──
   ctx.save();
   ctx.translate(0, r.headCY + drop);
-  if (pose.headTilt) ctx.rotate(pose.headTilt);
+  // undo the shear on the head itself: it travels with the lean but keeps its shape
+  if (shear) ctx.transform(1, 0, shear, 1, 0, 0);
+  if (pose.headTilt || shear) ctx.rotate(pose.headTilt + shear * 0.8);
   ctx.scale(r.k, r.k);
   drawHead(ctx, {
     skin,
@@ -425,12 +432,13 @@ export function drawCharacter(ctx: Ctx, ch: Character, pose: Pose, paint?: Paint
 
   const sx = 1 / Math.sqrt(pose.stretch);
   const syk = pose.stretch;
+  const lx = (x: number, y: number) => (x - shear * y) * sx;
   return {
     headTop: (r.headCY + drop - 372 * r.k) * syk + pose.dy,
     headCY: (r.headCY + drop) * syk + pose.dy,
     hands: [
-      [AL.h[0] * sx, AL.h[1] * syk + pose.dy],
-      [AR.h[0] * sx, AR.h[1] * syk + pose.dy],
+      [lx(AL.h[0], AL.h[1]), AL.h[1] * syk + pose.dy],
+      [lx(AR.h[0], AR.h[1]), AR.h[1] * syk + pose.dy],
     ],
   };
 }

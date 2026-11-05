@@ -23,7 +23,14 @@ const KUMMA_S = 'M-214,-118 L-206,-300 C-150,-352 160,-352 232,-306 L246,-122 Q2
 const KUMMA_S_SHADE = 'M-214,-118 L-206,-300 C-190,-318 -160,-330 -120,-338 C-136,-280 -140,-200 -136,-108 Z';
 const HAIR_S =
   'M-216,-60 C-240,-230 -130,-334 20,-332 C150,-328 238,-256 250,-140 L226,-152 L214,-106 L190,-156 L160,-112 L136,-162 L70,-168 C10,-150 -40,-120 -70,-70 L-100,-20 L-130,-74 L-160,6 L-188,-50 Z';
-const MASSAR_S = 'M-232,-110 C-250,-232 -170,-356 20,-362 C200,-350 266,-240 250,-116 Q10,-84 -232,-110 Z';
+const MASSAR_S = 'M-224,-136 C-250,-240 -164,-348 26,-356 C198,-346 262,-250 250,-146 C150,-120 20,-112 -110,-116 C-170,-118 -206,-128 -224,-136 Z';
+const MASSAR_S_ROLL = 'M-218,-146 C-120,-134 40,-134 244,-166';
+const MASSAR_S_KNOT = 'M-220,-170 C-280,-156 -296,-98 -266,-62 C-242,-30 -204,-46 -210,-80 C-220,-112 -230,-140 -220,-170 Z';
+const MASSAR_S_BAND: [number, number][] = [
+  [-222, -186],
+  [20, -318],
+  [244, -202],
+];
 const HOOD_S = 'M-20,-374 C160,-374 278,-262 270,-118 L262,-90 L246,-110 C232,-196 160,-232 64,-230 C30,-110 34,60 72,252 L160,240 L214,196 L234,250 C246,330 254,400 272,474 L-300,474 C-322,300 -320,120 -290,-60 C-258,-250 -160,-374 -20,-374 Z';
 const GHUTRA_S = 'M-20,-366 C160,-366 270,-262 266,-124 L258,-96 L246,-112 C232,-196 160,-234 64,-232 C40,-120 40,20 60,150 L40,160 C10,260 -40,360 -80,440 L-330,440 C-320,300 -316,120 -286,-60 C-254,-250 -160,-366 -20,-366 Z';
 const EYE_S = 'M120,-28 C138,-54 186,-54 200,-24 C196,6 178,28 150,30 C132,28 122,10 120,-28 Z';
@@ -88,18 +95,47 @@ function sideHead(ctx: Ctx, ch: Character, o: { skin: string; happy: boolean; se
       break;
     }
     case 'massar': {
+      const dark = darken(ch.accent, 0.32);
+      const light = lighten(ch.accent, 0.3);
+      cel(ctx, MASSAR_S_KNOT, darken(ch.accent, 0.12), 6, p);
       cel(ctx, MASSAR_S, ch.accent, 6, p);
       if (!p?.sil) {
         ctx.save();
         ctx.clip(P(MASSAR_S));
-        for (let i = -6; i <= 6; i++) {
-          const x = i * 46;
-          stroke(ctx, `M${x - 120},-100 C${x - 40},-200 ${x + 40},-280 ${x + 140},-380`, i % 2 ? lighten(ch.accent, 0.35) : darken(ch.accent, 0.3), 14);
+        for (let i = -7; i <= 7; i++) {
+          const x = i * 48;
+          stroke(ctx, `M${x - 170},-60 C${x - 90},-170 ${x - 10},-262 ${x + 120},-372`, i % 2 ? light : dark, i % 2 ? 11 : 7, undefined, 0.5);
         }
+        const [b0, b1, b2] = MASSAR_S_BAND;
+        const at = (t: number): [number, number] => {
+          const u = 1 - t;
+          return [u * u * b0[0] + 2 * u * t * b1[0] + t * t * b2[0], u * u * b0[1] + 2 * u * t * b1[1] + t * t * b2[1]];
+        };
+        ctx.lineCap = 'butt';
+        stroke(ctx, `M${b0[0]},${b0[1]} Q${b1[0]},${b1[1]} ${b2[0]},${b2[1]}`, dark, 74, undefined, 0.95);
+        for (let i = 0; i <= 11; i++) {
+          const t = i / 11;
+          const [x, y] = at(t);
+          const [x2, y2] = at(Math.min(1, t + 0.02));
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.rotate(Math.atan2(y2 - y, x2 - x));
+          fill(ctx, 'M-13,-16 C2,-24 14,-12 8,2 C2,14 -12,12 -13,-16 Z', light, undefined, 0.85);
+          fill(ctx, 'M-15,14 L15,14 L15,21 L-15,21 Z', light, undefined, 0.6);
+          ctx.restore();
+        }
+        ctx.lineCap = 'round';
         ctx.restore();
       }
-      cel(ctx, 'M-226,-160 C-280,-140 -292,-70 -268,-10 L-240,-24 C-256,-70 -250,-120 -214,-140 Z', darken(ch.accent, 0.1), 5, p);
       stroke(ctx, MASSAR_S, INK, 6, p);
+      // the twisted roll along the brow, an outlined rope of cloth
+      stroke(ctx, MASSAR_S_ROLL, p?.sil ?? INK, 60, p);
+      stroke(ctx, MASSAR_S_ROLL, p?.sil ?? ch.accent, 48, p);
+      if (!p?.sil) for (let i = -5; i <= 5; i++) stroke(ctx, `M${i * 44 - 12},${-128 - Math.abs(i) * 3} l22,-36`, dark, 6, undefined, 0.5);
+      if (!p?.sil) {
+        stroke(ctx, MASSAR_S_KNOT, INK, 6, p);
+        stroke(ctx, 'M-230,-150 C-264,-132 -272,-98 -258,-72', darken(ch.accent, 0.4), 6, undefined, 0.75);
+      }
       break;
     }
     case 'hair':

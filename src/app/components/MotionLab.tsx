@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Project } from '../../domain/types';
+import { MOTIONS } from '../../engine/motions';
 import { LESSONS } from '../../lab/lessons';
 import { MotionLibrary } from './MotionLibrary';
 
@@ -32,10 +33,10 @@ export function MotionLab({ project, shotIndex, onClose, onTry, onApply }: Props
         </div>
         <div className="tabs lab-tabs" role="tablist">
           <button role="tab" aria-selected={tab === 'library'} className={tab === 'library' ? 'active' : ''} onClick={() => setTab('library')}>
-            مكتبة الحركات (50)
+            مكتبة الحركات ({MOTIONS.length})
           </button>
           <button role="tab" aria-selected={tab === 'lessons'} className={tab === 'lessons' ? 'active' : ''} onClick={() => setTab('lessons')}>
-            دروس التحريك (8)
+            دروس التحريك ({LESSONS.length})
           </button>
         </div>
         {tab === 'library' && <MotionLibrary project={project} shotIndex={shotIndex} onApply={onApply} />}

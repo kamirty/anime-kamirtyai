@@ -59,7 +59,13 @@ export interface Actor {
   to?: number;
   /** Hand-posed joints for the custom action: a start pose and an optional end pose. */
   rig?: { from: RigPose; to?: RigPose; /** Seconds per back-and-forth cycle; the body then loops between the two poses. */ loop?: number };
+  /** A small object in the hands while the pose plays (a book, chalk, a dallah …). */
+  hold?: HeldProp;
 }
+
+/** Objects a character can hold. Drawn at the hand, in `src/engine/art/held.ts`. */
+export const HELD = ['book', 'paper', 'pen', 'pointer', 'flask', 'ball', 'flag', 'cup', 'dallah', 'mic', 'phone', 'plant'] as const;
+export type HeldProp = (typeof HELD)[number];
 
 /** [upper angle from straight down (positive = outward/up), bend at the elbow or knee], radians. */
 export type Joint = [number, number];
