@@ -1,13 +1,15 @@
 import '../../src/design/fontImports';
 import { ensureFontLoaded } from '../../src/design/fonts';
-import type { LayerSet } from '../../src/engine/renderer/renderFrame';
-import { renderFrame } from '../../src/engine/renderer/renderFrame';
-import { MOTIONS, applyMotion } from '../../src/engine/motions';
 import { newCharacter, parseProject } from '../../src/domain/sanitize';
 import type { Project } from '../../src/domain/types';
+import { applyMotion } from '../../src/engine/motions';
+import type { LayerSet } from '../../src/engine/renderer/renderFrame';
+import { renderFrame } from '../../src/engine/renderer/renderFrame';
 import * as S from './scenes';
 import type { Hit } from './sound';
 import {
+  type Ctx,
+  F,
   FPS,
   H,
   INK,
@@ -15,88 +17,108 @@ import {
   W,
   arabicNum,
   bg,
+  block,
   brackets,
+  chrome,
   clamp,
   cover,
-  easeInOut,
   easeOut,
-  fitSize,
-  flash,
+  fit,
+  pop,
   lerp,
   logo,
   progress,
-  scanlines,
   setFont,
   shake,
-  slam,
+  slashX,
   span,
   strike,
   tag,
-  wipeIn,
+  texture,
+  vignette,
+  word,
 } from './kinetic';
 
 /**
- * The promo film for anime.kamirtyai.com: Arabic kinetic typography in black and white,
- * cut against anime shots that the studio's own renderer draws, frame by frame.
- * Every frame is a pure function of time, so the render is repeatable.
+ * The promo film for anime.kamirtyai.com.
+ *
+ * Cut like the reels it is modelled on: a word every four or five frames, each smearing in and
+ * stopping dead, blocks of words ripped away, the frame inverting, a hard flash on every cut and
+ * never a still moment. The anime between the words is drawn by the studio's own renderer, so
+ * the advert only ever shows what the tool actually makes.
  */
 
-export const DURATION = 31;
+export const DURATION = 23.6;
 export const FRAMES = Math.round(DURATION * FPS);
 
-const T = {
-  hook1: 0.35,
-  hook2: 1.05,
-  flash1: 1.72,
-  m1: 1.75,
-  m2: 2.55,
-  m3: 3.35,
-  neg1: 4.4,
-  neg2: 5.1,
-  neg3: 5.8,
-  invert: 6.5,
-  box: 7.35,
-  type: 7.7,
-  enter: 9.85,
-  hero: 10.0,
-  f1: 14.1,
-  f2: 16.2,
-  f3: 18.3,
-  f4: 20.4,
-  f5: 22.5,
-  party: 24.6,
-  cta: 26.8,
+/** Cut points, in seconds. */
+const C = {
+  hook: 0.1,
+  hook2: 0.98,
+  shot1: 1.5,
+  shot2: 2.05,
+  shot3: 2.6,
+  shot4: 3.15,
+  neg: 3.72,
+  slash: 4.6,
+  enough: 5.05,
+  type: 5.45,
+  typeStart: 5.72,
+  enter: 7.15,
+  boom: 7.95,
+  hero: 8.0,
+  impact: 10.05,
+  f1: 11.0,
+  f2: 12.44,
+  f3: 13.88,
+  f4: 15.32,
+  f5: 16.76,
+  free: 18.2,
+  cta: 19.9,
+  blink: 22.2,
+  back: 22.55,
 };
 
+const SENTENCE = 'ولد عُماني فوق قلعة نزوى ليلاً يضرب القمر';
+
 export const HITS: Hit[] = [
-  { t: T.hook1 - 0.18, kind: 'whoosh' },
-  { t: T.hook1, kind: 'kick' },
-  { t: T.hook2 - 0.18, kind: 'whoosh' },
-  { t: T.hook2, kind: 'kick' },
-  { t: T.flash1, kind: 'impact', gain: 0.9 },
-  { t: T.m2, kind: 'tick', gain: 2 },
-  { t: T.m3, kind: 'tick', gain: 2 },
-  { t: T.neg1 - 0.16, kind: 'whoosh', gain: 0.8 },
-  { t: T.neg1, kind: 'kick' },
-  { t: T.neg2 - 0.16, kind: 'whoosh', gain: 0.8 },
-  { t: T.neg2, kind: 'kick' },
-  { t: T.neg3 - 0.16, kind: 'whoosh', gain: 0.8 },
-  { t: T.neg3, kind: 'kick' },
-  { t: T.invert, kind: 'impact', gain: 0.7 },
-  { t: T.box, kind: 'kick', gain: 0.6 },
-  { t: T.enter - 1, kind: 'riser' },
-  { t: T.enter, kind: 'impact' },
-  { t: T.hero + 2.1, kind: 'impact', gain: 1.1 },
-  { t: T.party, kind: 'impact', gain: 0.8 },
-  { t: T.cta, kind: 'sting' },
-  { t: T.cta + 0.1, kind: 'kick' },
-  // the beat under the feature run
-  ...Array.from({ length: 22 }, (_, i) => ({ t: T.f1 + i * 0.475, kind: 'hat' as const, gain: i % 2 ? 0.7 : 1 })),
-  ...Array.from({ length: 11 }, (_, i) => ({ t: T.f1 + i * 0.95, kind: 'kick' as const, gain: 0.75 })),
-  ...[T.f1, T.f2, T.f3, T.f4, T.f5].map((t) => ({ t: t - 0.15, kind: 'whoosh' as const, gain: 0.7 })),
-  ...[T.f1, T.f2, T.f3, T.f4, T.f5].map((t) => ({ t, kind: 'sub' as const, gain: 0.8 })),
-  // typing clicks
-  ...Array.from({ length: 24 }, (_, i) => ({ t: T.type + i * 0.07, kind: 'tick' as const, gain: 0.8 })),
+  { t: C.hook, kind: 'kick' },
+  { t: C.hook + 0.18, kind: 'kick', gain: 0.85 },
+  { t: C.hook + 0.36, kind: 'impact', gain: 0.6 },
+  { t: C.hook2, kind: 'kick' },
+  { t: C.hook2 + 0.18, kind: 'impact', gain: 0.75 },
+  ...[C.shot1, C.shot2, C.shot3, C.shot4].map((t) => ({ t, kind: 'impact' as const, gain: 0.6 })),
+  ...[C.shot1, C.shot2, C.shot3, C.shot4].map((t) => ({ t: t - 0.12, kind: 'whoosh' as const, gain: 0.6 })),
+  { t: C.neg, kind: 'kick' },
+  { t: C.neg + 0.18, kind: 'kick', gain: 0.9 },
+  { t: C.neg + 0.36, kind: 'kick', gain: 0.9 },
+  { t: C.slash, kind: 'whoosh' },
+  { t: C.slash + 0.16, kind: 'whoosh', gain: 0.8 },
+  { t: C.enough - 0.1, kind: 'impact' },
+  { t: C.type, kind: 'kick', gain: 0.6 },
+  ...Array.from({ length: 20 }, (_, i) => ({ t: C.typeStart + i * 0.07, kind: 'tick' as const, gain: 0.9 })),
+  { t: C.enter, kind: 'kick' },
+  { t: C.boom - 1, kind: 'riser' },
+  { t: C.boom, kind: 'impact', gain: 1.15 },
+  { t: 8.15, kind: 'tick', gain: 1.5 },
+  { t: 8.33, kind: 'tick', gain: 1.5 },
+  { t: C.impact, kind: 'impact', gain: 1.2 },
+  ...[C.f1, C.f2, C.f3, C.f4, C.f5].map((t) => ({ t, kind: 'impact' as const, gain: 0.6 })),
+  ...[C.f1, C.f2, C.f3, C.f4, C.f5].flatMap((t) => [
+    { t: t + 0.18, kind: 'kick' as const, gain: 0.7 },
+    { t: t - 0.1, kind: 'whoosh' as const, gain: 0.55 },
+  ]),
+  ...Array.from({ length: 30 }, (_, i) => ({ t: C.f1 + i * 0.24, kind: 'hat' as const, gain: i % 2 ? 0.55 : 0.85 })),
+  ...Array.from({ length: 15 }, (_, i) => ({ t: C.f1 + i * 0.48, kind: 'kick' as const, gain: 0.6 })),
+  { t: C.free, kind: 'impact', gain: 0.95 },
+  { t: C.free + 0.35, kind: 'kick' },
+  { t: C.cta, kind: 'sting' },
+  { t: C.cta, kind: 'kick' },
+  { t: C.cta + 0.25, kind: 'kick', gain: 0.85 },
+  { t: C.cta + 0.43, kind: 'kick', gain: 0.85 },
+  { t: C.cta + 0.61, kind: 'impact', gain: 0.7 },
+  { t: C.blink, kind: 'whoosh', gain: 0.75 },
+  { t: C.back, kind: 'kick', gain: 0.85 },
 ];
 
 const off = (w: number, h: number) => {
@@ -110,7 +132,7 @@ const stage = off(W, H);
 const stageCtx = stage.getContext('2d')!;
 const thumbs: { poses: HTMLCanvasElement[]; places: HTMLCanvasElement[]; layers: HTMLCanvasElement[] } = { poses: [], places: [], layers: [] };
 
-/** Draws one project frame onto the shared stage canvas and returns it. */
+/** Draws one project second onto the shared stage and returns it. */
 function clip(p: Project, second: number): HTMLCanvasElement {
   renderFrame(p, Math.max(0, Math.round(second * 24)), stageCtx, { width: W, height: H });
   return stage;
@@ -127,10 +149,8 @@ const POSE_CARDS: { id: string; kind: 'boy' | 'girl' | 'man' | 'woman'; outfit: 
 ];
 
 export async function init(): Promise<void> {
-  await ensureFontLoaded('cairo');
-  await ensureFontLoaded('reemkufi');
+  for (const f of ['cairo', 'reemkufi', 'lalezar', 'baloo', 'tajawal', 'marhey']) await ensureFontLoaded(f);
   await document.fonts.ready;
-  // six poses from the motion library, each drawn by the studio itself
   for (const card of POSE_CARDS) {
     const base = parseProject({
       aspect: 'portrait',
@@ -141,10 +161,9 @@ export async function init(): Promise<void> {
     renderFrame(applyMotion(base, 0, card.id), 66, c.getContext('2d')!, { width: 320, height: 440 }, { noText: true });
     thumbs.poses.push(c);
   }
-  void MOTIONS;
   for (const p of S.places) {
-    const c = off(300, 420);
-    renderFrame(p, 30, c.getContext('2d')!, { width: 300, height: 420 }, { noText: true });
+    const c = off(320, 440);
+    renderFrame(p, 30, c.getContext('2d')!, { width: 320, height: 440 }, { noText: true });
     thumbs.places.push(c);
   }
   const sets: LayerSet[] = [
@@ -159,335 +178,362 @@ export async function init(): Promise<void> {
   }
 }
 
-/** A hard two-frame flash on a cut. */
-const cutFlash = (ctx: Ctx2, t: number, at: number) => flash(ctx, span(t, at, at + 0.1));
-type Ctx2 = CanvasRenderingContext2D;
+/** A two-frame white flash on a cut. */
+const cut = (ctx: Ctx, t: number, at: number) => pop(ctx, t, at, 2);
 
-function footer(ctx: Ctx2, text: string, alpha = 0.75) {
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  setFont(ctx, 34);
-  ctx.fillStyle = PAPER;
-  ctx.fillText(text, W / 2, H - 92);
-  ctx.restore();
+/** A clip filling the frame, always pushing in, with a label and a viewfinder. */
+function shot(ctx: Ctx, t: number, at: number, dur: number, p: Project, from: number, label: string, zoom = 1.14) {
+  const k = span(t, at, at + dur);
+  cover(ctx, clip(p, from + (t - at)), 0, 0, W, H, lerp(1, zoom, k));
+  vignette(ctx, 0.45);
+  brackets(ctx, 54, 300, W - 108, H - 760, span(t, at, at + 4 * F), 80, 8);
+  tag(ctx, label, W / 2, H - 330, t - at - 0.06, 40);
+  cut(ctx, t, at);
 }
 
-function montage(ctx: Ctx2, t: number) {
-  const beats: [number, number, Project, string, number][] = [
-    [T.m1, T.m2, S.classroom, 'الفصل · نهارًا', 1.2],
-    [T.m2, T.m3, S.beach, 'البحر · غروبًا', 1.1],
-    [T.m3, T.neg1 - 0.1, S.desert, 'الصحراء · ركض', 0.9],
-  ];
-  for (const [a, b, project, label, start] of beats) {
-    if (t < a || t >= b) continue;
-    const k = span(t, a, b);
-    cover(ctx, clip(project, start + (t - a)), 0, 0, W, H);
-    scanlines(ctx, 0, 0, W, H, 0.07);
-    brackets(ctx, 60, 300, W - 120, H - 700, span(t, a, a + 0.25), 90, 8);
-    tag(ctx, label, W / 2, 1420, span(t, a + 0.1, a + 0.3), 38);
-    footer(ctx, 'كل لقطة هنا رسمتها الأداة نفسها', 0.55 + 0.2 * Math.sin(k * 6));
-    cutFlash(ctx, t, a);
-  }
-}
-
-function features(ctx: Ctx2, t: number) {
-  // ١٠٠ حركة
-  if (t >= T.f1 && t < T.f2) {
-    const k = span(t, T.f1, T.f1 + 0.7);
-    const n = Math.round(easeOut(k) * 100);
+/** Thumbnails punching in one after another. */
+function grid(ctx: Ctx, t: number, at: number, cards: HTMLCanvasElement[], top: number, spin = false) {
+  const w = 320;
+  const h = 440;
+  cards.forEach((c, i) => {
+    const kk = clamp((t - at - 0.1 - i * 0.07) / 0.16);
+    if (kk <= 0) return;
+    const e = easeOut(kk);
+    const col = i % 3;
+    const row = Math.floor(i / 3);
+    const x = W / 2 + (1 - col) * (w + 16) - w / 2;
+    const y = top + row * (h + 16);
     ctx.save();
-    shake(ctx, (1 - clamp(span(t, T.f1, T.f1 + 0.2))) * 8, 11);
-    setFont(ctx, 230, 'Cairo');
-    ctx.fillStyle = PAPER;
-    ctx.fillText(arabicNum(n), W / 2, 420);
-    slam(ctx, 'حركة جاهزة', { y: 620, size: 96, k: span(t, T.f1 + 0.15, T.f1 + 0.5) });
-    const grid = span(t, T.f1 + 0.25, T.f1 + 1.5);
-    thumbs.poses.forEach((c, i) => {
-      const kk = clamp((grid * 6 - i) / 1.2);
-      if (kk <= 0) return;
-      const col = i % 3;
-      const row = Math.floor(i / 3);
-      const w = 320;
-      const h = 440;
-      const x = W / 2 + (1 - col) * (w + 18) - w / 2;
-      const y = 800 + row * (h + 20);
-      ctx.save();
-      ctx.globalAlpha = kk;
-      ctx.translate(x + w / 2, y + h / 2);
-      ctx.scale(lerp(0.75, 1, easeOut(kk)), lerp(0.75, 1, easeOut(kk)));
-      cover(ctx, c, -w / 2, -h / 2, w, h, 12);
-      ctx.strokeStyle = PAPER;
-      ctx.lineWidth = 3;
-      ctx.strokeRect(-w / 2, -h / 2, w, h);
-      ctx.restore();
-    });
+    ctx.translate(x + w / 2 + (1 - e) * 130, y + h / 2);
+    if (spin) ctx.rotate((1 - e) * 0.3);
+    ctx.scale(lerp(1.3, 1, e), lerp(1.3, 1, e));
+    ctx.globalAlpha = clamp(kk * 2);
+    cover(ctx, c, -w / 2, -h / 2, w, h, 1, 10);
+    ctx.strokeStyle = PAPER;
+    ctx.lineWidth = 4;
+    ctx.strokeRect(-w / 2, -h / 2, w, h);
     ctx.restore();
-    cutFlash(ctx, t, T.f1);
-  }
-  // الأماكن والأوقات
-  if (t >= T.f2 && t < T.f3) {
-    slam(ctx, '٩ أماكن × ٣ أوقات', { y: 420, size: 108, k: span(t, T.f2, T.f2 + 0.4) });
-    const grid = span(t, T.f2 + 0.15, T.f2 + 1.4);
-    thumbs.places.forEach((c, i) => {
-      const kk = clamp((grid * 9 - i) / 1.1);
-      if (kk <= 0) return;
-      const col = i % 3;
-      const row = Math.floor(i / 3);
-      const w = 290;
-      const h = 400;
-      const x = W / 2 + (1 - col) * (w + 18) - w / 2;
-      const y = 620 + row * (h + 18);
-      ctx.save();
-      ctx.translate(x + w / 2, y + h / 2);
-      ctx.rotate((1 - easeOut(kk)) * 0.25);
-      ctx.scale(easeOut(kk), easeOut(kk));
-      cover(ctx, c, -w / 2, -h / 2, w, h, 12);
-      ctx.strokeStyle = PAPER;
-      ctx.lineWidth = 3;
-      ctx.strokeRect(-w / 2, -h / 2, w, h);
-      ctx.restore();
-    });
-    cutFlash(ctx, t, T.f2);
-  }
-  // الصوت
-  if (t >= T.f3 && t < T.f4) {
-    slam(ctx, 'أصوات بلا حقوق', { y: 700, size: 120, k: span(t, T.f3, T.f3 + 0.4) });
-    wipeIn(ctx, 'مولّدة بالكود داخل متصفحك', 860, span(t, T.f3 + 0.3, T.f3 + 0.9), 56);
-    const k = t - T.f3;
-    ctx.save();
-    ctx.fillStyle = PAPER;
-    const bars = 42;
-    for (let i = 0; i < bars; i++) {
-      const p = i / (bars - 1);
-      const env = Math.sin(p * Math.PI);
-      const a = Math.sin(k * 9 + i * 0.7) * 0.5 + Math.sin(k * 15 + i * 0.31) * 0.5;
-      const hgt = 40 + Math.abs(a) * env * 320 * clamp(span(t, T.f3 + 0.2, T.f3 + 0.6));
-      const x = W * 0.1 + p * W * 0.8;
-      ctx.fillRect(x - 7, 1180 - hgt / 2, 14, hgt);
-    }
-    ctx.restore();
-    tag(ctx, 'ريح · موج · طبول · ألعاب نارية', W / 2, 1480, span(t, T.f3 + 0.5, T.f3 + 0.8), 40);
-    cutFlash(ctx, t, T.f3);
-  }
-  // الطبقات
-  if (t >= T.f4 && t < T.f5) {
-    slam(ctx, 'طبقات للمونتاج', { y: 380, size: 120, k: span(t, T.f4, T.f4 + 0.4) });
-    const k = easeOut(span(t, T.f4 + 0.2, T.f4 + 1.3));
-    const labels = ['الخلفية', 'الشخصيات', 'المؤثرات والنص'];
-    thumbs.layers.forEach((c, i) => {
-      const w = 470;
-      const h = 835;
-      const x = W / 2 - w / 2 + (i - 1) * 60 * k;
-      const y = 640 + (i - 1) * 150 * k;
-      ctx.save();
-      ctx.translate(x + w / 2, y + h / 2);
-      ctx.rotate(-0.06 * k);
-      ctx.globalAlpha = 0.35 + 0.65 * clamp(k * 2 - i * 0.2);
-      ctx.fillStyle = INK;
-      ctx.fillRect(-w / 2, -h / 2, w, h);
-      cover(ctx, c, -w / 2, -h / 2, w, h, 10);
-      ctx.strokeStyle = PAPER;
-      ctx.lineWidth = 3;
-      ctx.strokeRect(-w / 2, -h / 2, w, h);
-      ctx.globalAlpha = 1;
-      ctx.restore();
-      ctx.save();
-      ctx.globalAlpha = clamp(k * 2 - i * 0.2);
-      setFont(ctx, 36);
-      ctx.fillStyle = PAPER;
-      ctx.textAlign = 'right';
-      ctx.fillText(labels[i], W - 70, y + h / 2 + (i - 1) * 40);
-      ctx.textAlign = 'center';
-      ctx.restore();
-    });
-    cutFlash(ctx, t, T.f4);
-  }
-  // التصدير
-  if (t >= T.f5 && t < T.party) {
-    slam(ctx, 'فيديو MP4', { y: 680, size: 150, k: span(t, T.f5, T.f5 + 0.4) });
-    wipeIn(ctx, 'بضغطة واحدة، من المتصفح', 840, span(t, T.f5 + 0.25, T.f5 + 0.9), 56);
-    progress(ctx, 1080, span(t, T.f5 + 0.4, T.f5 + 1.7), 'يُصدَّر');
-    const done = t > T.f5 + 1.75;
-    if (done) slam(ctx, '✓ جاهز', { y: 1320, size: 90, k: span(t, T.f5 + 1.75, T.f5 + 1.95) });
-    tag(ctx, 'بلا خادم · بلا رفع · ملفك يبقى عندك', W / 2, 1520, span(t, T.f5 + 0.8, T.f5 + 1.1), 38);
-    cutFlash(ctx, t, T.f5);
-  }
+  });
 }
 
-export function draw(ctx: Ctx2, frame: number): void {
+export function draw(ctx: Ctx, frame: number): void {
   const t = frame / FPS;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalAlpha = 1;
-  bg(ctx, INK);
+  const inverted = t >= C.neg && t < C.enough;
+  bg(ctx, inverted ? PAPER : INK);
 
-  // ── the hook ──
-  if (t < T.m1) {
-    brackets(ctx, 80, 560, W - 160, 820, span(t, 0.05, 0.45), 110, 9);
-    if (t >= T.hook1) slam(ctx, 'جملة واحدة.', { y: 820, size: 150, k: span(t, T.hook1, T.hook1 + 0.35), out: span(t, T.flash1 - 0.06, T.flash1) });
-    if (t >= T.hook2) slam(ctx, 'تصير أنمي.', { y: 1080, size: 170, k: span(t, T.hook2, T.hook2 + 0.35), out: span(t, T.flash1 - 0.06, T.flash1) });
-    footer(ctx, 'استوديو الأنمي العربي', clamp(span(t, 0.3, 0.9)) * 0.6);
+  ctx.save();
+  // the whole frame breathes and twitches; harder while the beat runs
+  shake(ctx, t > C.f1 && t < C.free ? 2.6 : 1.2, Math.floor(t * 30));
+
+  // ── 1. the hook ──
+  if (t < C.shot1) {
+    block(
+      ctx,
+      t,
+      [
+        { t: C.hook, text: 'جملة', y: 680, size: 240, family: 'Lalezar', align: 'r' },
+        { t: C.hook + 0.18, text: 'عربية', y: 900, size: 240, family: 'Lalezar', look: 'outline', align: 'l' },
+        { t: C.hook + 0.36, text: 'واحدة', y: 1125, size: 240, family: 'Lalezar', em: true, align: 'r' },
+      ],
+      0.84,
+    );
+    block(
+      ctx,
+      t,
+      [
+        { t: C.hook2, text: 'تصير', y: 820, size: 240, family: 'Baloo Bhaijaan 2', look: 'extrude', align: 'l' },
+        { t: C.hook2 + 0.18, text: 'أنمي', y: 1090, size: 300, family: 'Lalezar', em: true },
+      ],
+      1.42,
+    );
   }
 
-  // ── what it makes ──
-  montage(ctx, t);
-
-  // ── what it does not ask of you ──
-  if (t >= T.neg1 && t < T.invert) {
-    const rows: [number, string, number][] = [
-      [T.neg1, 'بلا برامج', 700],
-      [T.neg2, 'بلا تحميل', 980],
-      [T.neg3, 'بلا اشتراك', 1260],
-    ];
-    for (const [at, text, y] of rows) {
-      if (t < at) continue;
-      const k = span(t, at, at + 0.3);
-      slam(ctx, text, { y, size: 140, k });
-      if (t > at + 0.3) {
-        const size = fitSize(ctx, text, W * 0.88, 140);
-        strike(ctx, text, y, span(t, at + 0.3, at + 0.55), size);
-      }
-    }
+  // ── 2. four shots, hard cuts ──
+  if (t >= C.shot1 && t < C.neg) {
+    if (t < C.shot2) shot(ctx, t, C.shot1, 0.55, S.hero, 1.75, 'قلعة · ليلاً');
+    else if (t < C.shot3) shot(ctx, t, C.shot2, 0.55, S.classroom, 1.2, 'فصل · نهارًا');
+    else if (t < C.shot4) shot(ctx, t, C.shot3, 0.55, S.beach, 1.1, 'بحر · غروبًا');
+    else shot(ctx, t, C.shot4, 0.57, S.desert, 0.9, 'صحراء · ركض');
     ctx.save();
-    shake(ctx, Math.max(0, 10 - (t - T.neg3) * 40), 3);
+    setFont(ctx, 40);
+    ctx.fillStyle = PAPER;
+    ctx.globalAlpha = 0.9;
+    ctx.fillText('كل لقطة رسمتها الأداة نفسها', W / 2, H - 200);
     ctx.restore();
   }
 
-  // ── your browser is enough ──
-  if (t >= T.invert && t < T.box) {
-    bg(ctx, PAPER);
-    slam(ctx, 'متصفحك يكفي.', { y: H / 2 - 60, size: 180, k: span(t, T.invert, T.invert + 0.35), color: INK });
-    wipeIn(ctx, 'افتح الرابط واكتب. هذا كل شيء.', H / 2 + 140, span(t, T.invert + 0.3, T.invert + 0.8), 62, INK);
-    logo(ctx, W / 2, H - 420, 0.7, span(t, T.invert + 0.2, T.invert + 0.7), INK);
+  // ── 3. what it never asks of you ──
+  if (inverted) {
+    const rows: [number, string, number][] = [
+      [C.neg, 'بلا برامج', 700],
+      [C.neg + 0.18, 'بلا تحميل', 950],
+      [C.neg + 0.36, 'بلا اشتراك', 1200],
+    ];
+    const out = span(t, C.slash + 0.3, C.slash + 0.3 + 5 * F);
+    for (const [at, text, y] of rows) {
+      if (t < at) continue;
+      word(ctx, text, W / 2, y, t - at, out, { size: 190, color: INK, on: PAPER, family: 'Lalezar' });
+      const sk = span(t, at + 0.42, at + 0.6);
+      if (sk > 0 && out < 1) {
+        const size = fit(ctx, text, W * 0.92, 190, 'Lalezar');
+        setFont(ctx, size, 'Lalezar');
+        strike(ctx, ctx.measureText(text).width / 2 + 20, y + 6, sk, INK);
+      }
+    }
+    if (t >= C.slash && out < 1) slashX(ctx, W / 2, 950, 430, span(t, C.slash, C.slash + 0.3), INK, 26);
+    cut(ctx, t, C.neg);
   }
 
-  // ── describe the scene ──
-  if (t >= T.box && t < T.hero) {
-    tag(ctx, '١ — صِف المشهد بالعربية', W / 2, 520, span(t, T.box, T.box + 0.3), 44);
-    const k = easeOut(span(t, T.box, T.box + 0.35));
-    const bw = W * 0.86;
-    const bh = 340;
+  // ── 4. your browser is enough ──
+  if (t >= C.enough && t < C.type + 0.1) {
+    block(ctx, t, [{ t: C.enough, text: 'متصفحك يكفي', y: 960, size: 185, em: true, family: 'Baloo Bhaijaan 2' }], C.type - 0.02);
+    cut(ctx, t, C.enough);
+  }
+
+  // ── 5. describe it in Arabic ──
+  if (t >= C.type && t < C.boom) {
+    tag(ctx, 'اكتب بالعربية', W / 2, 560, t - C.type, 46);
+    const k = easeOut(clamp((t - C.type) / 0.14));
+    const bw = W * 0.88;
+    const bh = 330;
     const bx = (W - bw) / 2;
-    const by = 700;
+    const by = 720;
     ctx.save();
     ctx.globalAlpha = k;
     ctx.strokeStyle = PAPER;
-    ctx.lineWidth = 5;
+    ctx.lineWidth = 6;
     ctx.beginPath();
-    ctx.roundRect(bx, by + (1 - k) * 40, bw, bh, 18);
+    ctx.roundRect(bx + (1 - k) * 90, by, bw, bh, 18);
     ctx.stroke();
-    const line = 'ولد عُماني فوق قلعة نزوى ليلاً يضرب القمر';
-    const n = Math.round(clamp(span(t, T.type, T.type + 1.6)) * line.length);
-    const shown = line.slice(0, n);
-    const fs = fitSize(ctx, line, bw - 90, 54);
+    const n = Math.round(clamp((t - C.typeStart) / 1.35) * SENTENCE.length);
+    const shown = SENTENCE.slice(0, n);
+    const fs = fit(ctx, SENTENCE, bw - 90, 56);
     setFont(ctx, fs);
     ctx.textAlign = 'right';
     ctx.fillStyle = PAPER;
-    ctx.fillText(shown, bx + bw - 40, by + 120);
+    ctx.fillText(shown, bx + bw - 44, by + 118);
     const wv = ctx.measureText(shown).width;
-    if (Math.floor(t * 3) % 2 === 0 || n < line.length) ctx.fillRect(bx + bw - 44 - wv, by + 120 - fs / 2, 5, fs);
+    if (n < SENTENCE.length || Math.floor(t * 6) % 2 === 0) ctx.fillRect(bx + bw - 48 - wv, by + 118 - fs / 2, 6, fs);
     ctx.textAlign = 'center';
-    // the enter key, stamped when the line is done
-    const ek = span(t, T.enter - 0.45, T.enter - 0.2);
-    if (ek > 0) {
-      ctx.globalAlpha = k;
-      setFont(ctx, 46);
+    ctx.restore();
+    if (t >= C.enter) {
+      const e = easeOut(clamp((t - C.enter) / 0.12));
+      setFont(ctx, 50);
       const label = '⏎  اصنع المشهد';
-      const tw = ctx.measureText(label).width + 90;
+      const tw = ctx.measureText(label).width + 100;
       ctx.save();
       ctx.translate(W / 2, by + 250);
-      ctx.scale(lerp(1.3, 1, easeOut(ek)), lerp(1.3, 1, easeOut(ek)));
+      ctx.scale(lerp(1.4, 1, e), lerp(1.4, 1, e));
       ctx.fillStyle = PAPER;
       ctx.beginPath();
-      ctx.roundRect(-tw / 2, -38, tw, 76, 12);
+      ctx.roundRect(-tw / 2, -42, tw, 84, 12);
       ctx.fill();
       ctx.fillStyle = INK;
+      setFont(ctx, 50);
       ctx.fillText(label, 0, 2);
       ctx.restore();
     }
-    ctx.restore();
-    // the riser pulls the frame in before the reveal
-    const pull = span(t, T.enter - 0.8, T.enter);
+    // the frame squeezes shut before the reveal
+    const pull = span(t, C.boom - 0.55, C.boom);
     if (pull > 0) {
-      ctx.save();
-      ctx.globalAlpha = pull * 0.9;
+      const g = easeOut(pull) * H * 0.52;
       ctx.fillStyle = INK;
-      ctx.fillRect(0, 0, W, H * 0.5 * easeIn2(pull));
-      ctx.fillRect(0, H - H * 0.5 * easeIn2(pull), W, H * 0.5 * easeIn2(pull));
+      ctx.fillRect(0, 0, W, g);
+      ctx.fillRect(0, H - g, W, g);
+    }
+    cut(ctx, t, C.type);
+  }
+
+  // ── 6. the payoff ──
+  if (t >= C.hero && t < C.f1) {
+    const local = t - C.hero;
+    cover(ctx, clip(S.hero, 0.5 + local), 0, 0, W, H, lerp(1.04, 1.2, span(t, C.hero, C.f1)));
+    vignette(ctx, 0.4);
+    ctx.restore();
+    ctx.save();
+    shake(ctx, Math.max(0, 34 - Math.abs(local - 2.05) * 150), Math.floor(t * 40));
+    brackets(ctx, 46, 250, W - 92, H - 700, span(t, C.hero, C.hero + 4 * F), 80, 8);
+    block(
+      ctx,
+      t,
+      [
+        { t: 8.15, text: 'نفس الجملة', y: 1320, size: 120, family: 'Tajawal', align: 'r' },
+        { t: 8.33, text: 'صارت مشهدًا', y: 1490, size: 135, em: true, family: 'Lalezar', align: 'l' },
+      ],
+      8.9,
+    );
+    block(
+      ctx,
+      t,
+      [
+        { t: 10.3, text: 'صوت', y: 1320, size: 120, family: 'Tajawal', align: 'r' },
+        { t: 10.48, text: 'ومؤثرات', y: 1490, size: 135, em: true, family: 'Lalezar', align: 'l' },
+      ],
+      10.9,
+    );
+    pop(ctx, t, C.hero, 3);
+    pop(ctx, t, C.impact, 3);
+  }
+
+  // ── 7. what is inside ──
+  if (t >= C.f1 && t < C.free) {
+    if (t < C.f2) {
+      const k = span(t, C.f1, C.f1 + 0.55);
+      setFont(ctx, 240);
+      ctx.fillStyle = PAPER;
+      ctx.fillText(arabicNum(easeOut(k) * 100), W / 2, 430);
+      block(ctx, t, [{ t: C.f1 + 0.18, text: 'حركة جاهزة', y: 650, size: 135, em: true, family: 'Baloo Bhaijaan 2' }], C.f2 - 0.1);
+      grid(ctx, t, C.f1, thumbs.poses, 810);
+      cut(ctx, t, C.f1);
+    } else if (t < C.f3) {
+      block(
+        ctx,
+        t,
+        [
+          { t: C.f2, text: '٩ أماكن', y: 390, size: 165, family: 'Lalezar', align: 'r' },
+          { t: C.f2 + 0.18, text: '٣ أوقات', y: 610, size: 165, em: true, family: 'Lalezar', align: 'l' },
+        ],
+        C.f3 - 0.1,
+      );
+      grid(ctx, t, C.f2, thumbs.places, 790, true);
+      cut(ctx, t, C.f2);
+    } else if (t < C.f4) {
+      block(
+        ctx,
+        t,
+        [
+          { t: C.f3, text: 'أصوات', y: 620, size: 190, family: 'Lalezar', look: 'extrude', align: 'r' },
+          { t: C.f3 + 0.18, text: 'بلا حقوق', y: 850, size: 165, em: true, family: 'Baloo Bhaijaan 2', align: 'l' },
+        ],
+        C.f4 - 0.1,
+      );
+      const k = t - C.f3;
+      ctx.save();
+      ctx.fillStyle = PAPER;
+      const bars = 46;
+      for (let i = 0; i < bars; i++) {
+        const p = i / (bars - 1);
+        const e = Math.sin(p * Math.PI);
+        const a = Math.sin(k * 11 + i * 0.7) * 0.5 + Math.sin(k * 19 + i * 0.31) * 0.5;
+        const hgt = 30 + Math.abs(a) * e * 420 * clamp(span(t, C.f3 + 0.1, C.f3 + 0.3));
+        ctx.fillRect(W * 0.08 + p * W * 0.84 - 7, 1260 - hgt / 2, 15, hgt);
+      }
       ctx.restore();
+      tag(ctx, 'ريح · موج · طبول · ألعاب نارية', W / 2, 1580, t - C.f3 - 0.3, 42);
+      cut(ctx, t, C.f3);
+    } else if (t < C.f5) {
+      block(
+        ctx,
+        t,
+        [
+          { t: C.f4, text: 'طبقات', y: 350, size: 180, family: 'Lalezar', align: 'r' },
+          { t: C.f4 + 0.18, text: 'للمونتاج', y: 570, size: 155, em: true, family: 'Baloo Bhaijaan 2', align: 'l' },
+        ],
+        C.f5 - 0.1,
+      );
+      const k = easeOut(span(t, C.f4 + 0.15, C.f4 + 0.7));
+      const labels = ['الخلفية', 'الشخصيات', 'المؤثرات والنص'];
+      thumbs.layers.forEach((c, i) => {
+        const w = 460;
+        const h = 818;
+        const x = W / 2 - w / 2 + (i - 1) * 64 * k;
+        const y = 790 + (i - 1) * 140 * k;
+        ctx.save();
+        ctx.translate(x + w / 2, y + h / 2);
+        ctx.rotate(-0.07 * k);
+        ctx.fillStyle = INK;
+        ctx.fillRect(-w / 2, -h / 2, w, h);
+        cover(ctx, c, -w / 2, -h / 2, w, h, 1, 8);
+        ctx.strokeStyle = PAPER;
+        ctx.lineWidth = 4;
+        ctx.strokeRect(-w / 2, -h / 2, w, h);
+        ctx.restore();
+        ctx.save();
+        ctx.globalAlpha = clamp(k * 2 - i * 0.2);
+        setFont(ctx, 38);
+        ctx.fillStyle = PAPER;
+        ctx.textAlign = 'right';
+        ctx.fillText(labels[i], W - 60, y + h / 2 + (i - 1) * 46);
+        ctx.restore();
+      });
+      cut(ctx, t, C.f4);
+    } else {
+      block(
+        ctx,
+        t,
+        [
+          { t: C.f5, text: 'فيديو MP4', y: 630, size: 185, family: 'Lalezar' },
+          { t: C.f5 + 0.18, text: 'بضغطة واحدة', y: 870, size: 145, em: true, family: 'Baloo Bhaijaan 2' },
+        ],
+        C.free - 0.1,
+      );
+      progress(ctx, 1140, span(t, C.f5 + 0.25, C.f5 + 1.1), 'يُصدَّر');
+      if (t > C.f5 + 1.12) word(ctx, '✓ جاهز', W / 2, 1400, t - C.f5 - 1.12, 0, { size: 110 });
+      tag(ctx, 'بلا خادم · ملفك يبقى عندك', W / 2, 1620, t - C.f5 - 0.5, 40);
+      cut(ctx, t, C.f5);
     }
   }
 
-  // ── the payoff: the scene it just described ──
-  if (t >= T.hero && t < T.f1) {
-    const local = t - T.hero;
-    cover(ctx, clip(S.hero, 0.45 + local), 0, 0, W, H);
-    scanlines(ctx, 0, 0, W, H, 0.06);
-    ctx.save();
-    shake(ctx, Math.max(0, 26 - Math.abs(local - 2.1) * 120), 7);
-    ctx.restore();
-    brackets(ctx, 50, 240, W - 100, H - 560, span(t, T.hero, T.hero + 0.3), 90, 8);
-    tag(ctx, 'نفس الجملة… صارت مشهدًا', W / 2, 1500, span(t, T.hero + 0.2, T.hero + 0.5), 42);
-    footer(ctx, 'صوت ومؤثرات وحركة كاميرا — تلقائيًا', 0.7);
-    flash(ctx, span(t, T.hero, T.hero + 0.18));
-    if (local > 2.05) flash(ctx, span(t, T.hero + 2.1, T.hero + 2.3));
+  // ── 8. and all of it, free ──
+  if (t >= C.free && t < C.cta) {
+    cover(ctx, clip(S.celebrate, 0.5 + (t - C.free)), 0, 0, W, H, lerp(1.02, 1.16, span(t, C.free, C.cta)));
+    vignette(ctx, 0.5);
+    block(
+      ctx,
+      t,
+      [
+        { t: C.free + 0.12, text: 'وكل هذا', y: 770, size: 145, family: 'Tajawal', align: 'r' },
+        { t: C.free + 0.33, text: 'مجانًا', y: 1030, size: 270, em: true, family: 'Lalezar' },
+      ],
+      C.cta - 0.12,
+    );
+    cut(ctx, t, C.free);
   }
 
-  // ── what is inside ──
-  features(ctx, t);
-
-  // ── free ──
-  if (t >= T.party && t < T.cta) {
-    cover(ctx, clip(S.celebrate, 0.4 + (t - T.party)), 0, 0, W, H);
-    scanlines(ctx, 0, 0, W, H, 0.06);
-    ctx.save();
-    ctx.globalAlpha = 0.55;
-    ctx.fillStyle = INK;
-    ctx.fillRect(0, 560, W, 520);
-    ctx.restore();
-    slam(ctx, 'وكل هذا…', { y: 700, size: 110, k: span(t, T.party + 0.1, T.party + 0.4) });
-    slam(ctx, 'مجانًا', { y: 920, size: 210, k: span(t, T.party + 0.5, T.party + 0.85) });
-    cutFlash(ctx, t, T.party);
-  }
-
-  // ── the invitation ──
-  if (t >= T.cta) {
-    const k0 = span(t, T.cta, T.cta + 0.4);
-    logo(ctx, W / 2, 620, 1.05, k0);
-    slam(ctx, 'استوديو الأنمي العربي', { y: 980, size: 120, k: span(t, T.cta + 0.25, T.cta + 0.6), family: 'Reem Kufi' });
-    wipeIn(ctx, 'اكتب بالعربية · شاهد · نزّل الفيديو', 1120, span(t, T.cta + 0.6, T.cta + 1.2), 56);
-    const uk = span(t, T.cta + 1.1, T.cta + 1.5);
-    if (uk > 0) {
-      const e = easeOut(uk);
+  // ── 9. the invitation ──
+  if (t >= C.cta) {
+    if (t >= C.blink && t < C.back) {
+      cover(ctx, clip(S.hero, 2.0 + (t - C.blink)), 0, 0, W, H, 1.2);
+      vignette(ctx, 0.5);
+      cut(ctx, t, C.blink);
+    }
+    logo(ctx, W / 2, 500, 0.78, span(t, C.cta, C.cta + 0.18));
+    block(
+      ctx,
+      t,
+      [
+        { t: C.cta + 0.25, text: 'استوديو الأنمي', y: 900, size: 145, family: 'Reem Kufi', align: 'r' },
+        { t: C.cta + 0.43, text: 'العربي', y: 1095, size: 165, em: true, family: 'Reem Kufi', align: 'l' },
+      ],
+      99,
+    );
+    if (t > C.cta + 0.7) word(ctx, 'اكتب · شاهد · نزّل الفيديو', W / 2, 1270, t - C.cta - 0.7, 0, { size: 62, family: 'Tajawal' });
+    if (t > C.cta + 0.95) {
+      const e = easeOut(clamp((t - C.cta - 0.95) / 0.14));
       ctx.save();
-      ctx.translate(W / 2, 1360);
-      ctx.scale(lerp(1.25, 1, e), lerp(1.25, 1, e));
-      setFont(ctx, 72, 'Cairo');
+      ctx.translate(W / 2, 1450);
+      ctx.scale(lerp(1.3, 1, e), lerp(1.3, 1, e));
+      setFont(ctx, 76);
       ctx.direction = 'ltr';
       const label = 'anime.kamirtyai.com';
       const tw = ctx.measureText(label).width + 110;
       ctx.fillStyle = PAPER;
       ctx.beginPath();
-      ctx.roundRect(-tw / 2, -62, tw, 124, 16);
+      ctx.roundRect(-tw / 2, -64, tw, 128, 16);
       ctx.fill();
       ctx.fillStyle = INK;
       ctx.fillText(label, 0, 4);
       ctx.restore();
     }
-    const gk = span(t, T.cta + 1.7, T.cta + 2.05);
-    if (gk > 0) {
-      slam(ctx, 'جرّبها الآن', { y: 1600, size: 110, k: gk });
-      if (Math.floor(t * 2.6) % 2 === 0) {
-        ctx.fillStyle = PAPER;
-        ctx.fillRect(W / 2 - 250, 1670, 500, 5);
-      }
-    }
-    footer(ctx, 'Kamirty.ai', 0.5);
+    if (t > C.cta + 1.25) word(ctx, 'جرّبها الآن', W / 2, 1680, t - C.cta - 1.25, 0, { size: 130, family: 'Lalezar', em: Math.floor(t * 3) % 2 === 0 });
   }
-}
 
-/** A sharper ease for the frame pulling in. */
-function easeIn2(t: number): number {
-  return clamp(t) * clamp(t);
-}
+  ctx.restore();
 
-void easeInOut;
+  // ── the frame itself ──
+  texture(ctx, t, inverted ? 0.03 : 0.06);
+  if (!inverted) vignette(ctx, 0.28);
+  chrome(ctx, t, inverted);
+}

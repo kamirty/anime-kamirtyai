@@ -1,7 +1,12 @@
 /**
- * The drawing kit for the promo film: slams, whip smears, strikes, masks, counters and frames.
- * Black and white, geometric, right to left — the Kamirty look. Everything is a pure function
- * of time, so any frame can be drawn on its own and the render is repeatable.
+ * The drawing kit for the promo film.
+ *
+ * The grammar is taken from the reference reels: a word every few frames, each one arriving as
+ * two or three frames of violent smear and then stopping dead; words stacking into a line and
+ * the whole block ripped away; the frame inverting; a slash through what you no longer need.
+ * Nothing is ever perfectly still. Black and white, geometric — the Kamirty look.
+ *
+ * Everything is a pure function of time, so any frame can be drawn on its own.
  */
 
 export type Ctx = CanvasRenderingContext2D;
@@ -9,28 +14,35 @@ export type Ctx = CanvasRenderingContext2D;
 export const W = 1080;
 export const H = 1920;
 export const FPS = 30;
+/** One frame, in seconds: the unit this film is cut in. */
+export const F = 1 / FPS;
 
 export const INK = '#000000';
 export const PAPER = '#ffffff';
 
 export const clamp = (v: number, a = 0, b = 1) => (v < a ? a : v > b ? b : v);
 export const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-/** 0 → 1 across [a, b] seconds. */
 export const span = (t: number, a: number, b: number) => clamp((t - a) / (b - a));
 export const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
 export const easeIn = (t: number) => t * t * t;
 export const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
-/** Overshoots, then settles: the slam. */
-export const back = (t: number) => {
-  const c = 1.9;
-  return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2);
-};
+/** Snaps home with a small overshoot. */
+export const back = (t: number) => 1 + 2.7 * Math.pow(t - 1, 3) + 1.7 * Math.pow(t - 1, 2);
+
+/** Deterministic noise, so every render is identical. */
+export function rnd(seed: number): number {
+  const x = Math.sin(seed * 127.1 + 311.7) * 43758.5453;
+  return x - Math.floor(x);
+}
+export const rnd2 = (seed: number) => rnd(seed) * 2 - 1;
 
 export function bg(ctx: Ctx, color = INK) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = color;
   ctx.fillRect(0, 0, W, H);
 }
+
+const sizeCache = new Map<string, number>();
 
 export function setFont(ctx: Ctx, size: number, family = 'Cairo', weight = 700) {
   ctx.font = `${weight} ${size}px "${family}", "Cairo", sans-serif`;
@@ -39,119 +51,230 @@ export function setFont(ctx: Ctx, size: number, family = 'Cairo', weight = 700) 
   ctx.textBaseline = 'middle';
 }
 
-/** Largest size that keeps the line inside `maxW`. */
-export function fitSize(ctx: Ctx, text: string, maxW: number, start: number, family = 'Cairo', weight = 700): number {
+/** Biggest size that keeps the line inside `maxW`; cached, because it is measured every frame. */
+export function fit(ctx: Ctx, text: string, maxW: number, start: number, family = 'Cairo', weight = 700): number {
+  const key = `${text}|${maxW}|${start}|${family}|${weight}`;
+  const hit = sizeCache.get(key);
+  if (hit !== undefined) {
+    setFont(ctx, hit, family, weight);
+    return hit;
+  }
   let s = start;
-  for (let i = 0; i < 40; i++) {
+  for (let i = 0; i < 60; i++) {
     setFont(ctx, s, family, weight);
     if (ctx.measureText(text).width <= maxW) break;
-    s -= Math.max(2, s * 0.04);
+    s -= Math.max(1.5, s * 0.035);
   }
+  sizeCache.set(key, s);
   return s;
 }
 
-export interface SlamOpts {
-  y: number;
+/**
+ * How a word is set. The reels change typeface and treatment every few words, so the eye never
+ * settles: a heavy display face for the shout, a geometric kufi for the name, an outline for the
+ * aside, a solid slab for the word that matters.
+ */
+export type WordLook = 'fill' | 'slab' | 'outline' | 'extrude';
+
+export interface WordStyle {
   size?: number;
   family?: string;
-  weight?: number;
-  color?: string;
-  /** 0 → 1 through the slam. */
-  k: number;
-  /** Trailing smear, in pixels, at k = 0. */
-  smear?: number;
   maxW?: number;
-  /** Fade the whole word out near the end of its life. */
-  out?: number;
+  /** Shorthand for the solid slab. */
+  em?: boolean;
+  look?: WordLook;
+  /** Centred, or pinned to the right or left edge. */
+  align?: 'c' | 'r' | 'l';
+  color?: string;
+  on?: string;
 }
 
-/** A word that slams in from a touch too big, with a motion smear behind it. */
-export function slam(ctx: Ctx, text: string, o: SlamOpts) {
-  const k = clamp(o.k);
-  const e = back(easeOut(k));
-  const scale = lerp(1.55, 1, clamp(e));
-  const alpha = clamp(k * 3.2) * (1 - clamp(o.out ?? 0));
-  const size = fitSize(ctx, text, o.maxW ?? W * 0.88, o.size ?? 150, o.family, o.weight);
-  const smear = (o.smear ?? 70) * Math.pow(1 - k, 2.2);
+const EDGE = 64;
+
+/**
+ * One word of a line. `age` is seconds since it landed; `out` 0 → 1 rips it away.
+ * The first two frames are a smear travelling in from the side, then it stops dead.
+ */
+export function word(ctx: Ctx, text: string, x: number, y: number, age: number, out: number, st: WordStyle = {}) {
+  const IN = 4 * F;
+  const k = clamp(age / IN);
+  const e = easeOut(k);
+  const fg = st.color ?? PAPER;
+  const bgc = st.on ?? INK;
+  const look: WordLook = st.look ?? (st.em ? 'slab' : 'fill');
+  const align = st.align ?? 'c';
+  const box = st.maxW ?? (look === 'slab' ? W * 0.74 : W * 0.88);
+  const size = fit(ctx, text, box, st.size ?? 160, st.family);
+  setFont(ctx, size, st.family);
+  const tw = ctx.measureText(text).width;
+  const anchor = align === 'r' ? W - EDGE : align === 'l' ? EDGE : x;
+  const from = align === 'l' ? -1 : 1;
+  const breathe = 1 + 0.014 * Math.sin(age * 7 + y * 0.01);
+  const scale = lerp(1.32, breathe, e);
+  const dx = from * lerp(W * 0.5, 0, e) + rnd2(Math.floor(age * 60) + y) * (1 - e) * 26;
+  const o = clamp(out);
+  const rip = o > 0 ? easeIn(o) : 0;
+  // where the ink sits relative to the anchor
+  const left = align === 'r' ? -tw : align === 'l' ? 0 : -tw / 2;
+  const pad = size * 0.22;
+
   ctx.save();
-  ctx.translate(W / 2, o.y);
-  ctx.scale(scale, scale);
-  setFont(ctx, size, o.family, o.weight);
-  ctx.fillStyle = o.color ?? PAPER;
-  if (smear > 1) {
-    for (let i = 6; i >= 1; i--) {
-      ctx.globalAlpha = alpha * 0.1 * (1 - i / 7);
-      ctx.fillText(text, (smear * i) / 6, 0);
-      ctx.fillText(text, (-smear * i) / 6, 0);
+  ctx.translate(anchor + dx - from * rip * W * 0.8, y + rnd2(Math.floor(age * 30)) * 2 * (1 - e));
+  ctx.scale(scale, scale * (1 - rip * 0.25));
+  ctx.globalAlpha = 1 - rip;
+  setFont(ctx, size, st.family);
+  ctx.textAlign = align === 'r' ? 'right' : align === 'l' ? 'left' : 'center';
+  const at = align === 'r' ? 0 : align === 'l' ? 0 : 0;
+
+  const paint = (ox: number, alpha: number) => {
+    ctx.globalAlpha = alpha;
+    if (look === 'slab') {
+      ctx.fillStyle = fg;
+      ctx.fillRect(left - pad + ox, -size * 0.68, tw + pad * 2, size * 1.36);
+    } else if (look === 'outline') {
+      ctx.strokeStyle = fg;
+      ctx.lineWidth = Math.max(3, size * 0.045);
+      ctx.lineJoin = 'round';
+      ctx.strokeText(text, at + ox, 0);
+    } else {
+      ctx.fillStyle = fg;
+      ctx.fillText(text, at + ox, 0);
+    }
+  };
+
+  // the smear: the word repeated along its travel, fading out behind it
+  const trail = (1 - e) * 190 + rip * 280;
+  if (trail > 2) for (let i = 1; i <= 7; i++) paint((-from * trail * i) / 7, (1 - rip) * 0.15);
+
+  if (look === 'extrude') {
+    // a block of depth behind the face of the letters
+    ctx.fillStyle = '#6e6e6e';
+    for (let i = 10; i >= 1; i--) {
+      ctx.globalAlpha = (1 - rip) * 0.9;
+      ctx.fillText(text, at + i * size * 0.016, i * size * 0.016);
     }
   }
-  ctx.globalAlpha = alpha;
-  ctx.fillText(text, 0, 0);
+  ctx.globalAlpha = 1 - rip;
+  if (look === 'slab') {
+    ctx.fillStyle = fg;
+    ctx.fillRect(left - pad, -size * 0.68, tw + pad * 2, size * 1.36);
+    ctx.fillStyle = bgc;
+    setFont(ctx, size, st.family);
+    ctx.textAlign = align === 'r' ? 'right' : align === 'l' ? 'left' : 'center';
+    ctx.fillText(text, at, size * 0.04);
+  } else paint(0, 1 - rip);
   ctx.restore();
 }
 
-/** A word that whips past: enters fast from the right, leaves to the left (reading direction). */
-export function whip(ctx: Ctx, text: string, y: number, k: number, size = 130, color = PAPER) {
-  const e = easeInOut(clamp(k));
-  const x = lerp(W * 0.9, -W * 0.9, e);
-  const speed = Math.abs(Math.cos(Math.PI * clamp(k))) * 0 + (1 - Math.abs(2 * clamp(k) - 1)) * 120;
-  ctx.save();
-  ctx.translate(W / 2 + x, y);
-  setFont(ctx, fitSize(ctx, text, W * 0.9, size));
-  ctx.fillStyle = color;
-  for (let i = 5; i >= 1; i--) {
-    ctx.globalAlpha = 0.12;
-    ctx.fillText(text, (speed * i) / 4, 0);
+export interface Line {
+  /** Seconds, absolute. */
+  t: number;
+  text: string;
+  y: number;
+  size?: number;
+  em?: boolean;
+  look?: WordLook;
+  align?: 'c' | 'r' | 'l';
+  family?: string;
+  maxW?: number;
+}
+
+/** Draws a stack of words that land one after another and are ripped away together. */
+export function block(ctx: Ctx, t: number, lines: Line[], clearAt: number, color = PAPER, on = INK) {
+  const out = span(t, clearAt, clearAt + 5 * F);
+  if (out >= 1) return;
+  for (const l of lines) {
+    if (t < l.t) continue;
+    word(ctx, l.text, W / 2, l.y, t - l.t, out, { size: l.size, em: l.em, look: l.look, align: l.align, family: l.family, maxW: l.maxW, color, on });
   }
-  ctx.globalAlpha = 1;
-  ctx.fillText(text, 0, 0);
-  ctx.restore();
 }
 
-/** Reveals a line behind a wipe that travels from the right, the way Arabic is read. */
-export function wipeIn(ctx: Ctx, text: string, y: number, k: number, size = 110, color = PAPER, family = 'Cairo') {
-  const e = easeOut(clamp(k));
-  const s = fitSize(ctx, text, W * 0.86, size, family);
-  setFont(ctx, s, family);
-  const w = ctx.measureText(text).width;
+/**
+ * A hard flash that starts at `at` and fades over `frames`. Nothing before, nothing after:
+ * the flash must never bleed over a shot it does not belong to.
+ */
+export function pop(ctx: Ctx, t: number, at: number, frames = 2, color = PAPER) {
+  if (t < at || t > at + frames * F) return;
+  flash(ctx, (t - at) / (frames * F), color);
+}
+
+/** A hard flash over the whole frame; `k` 0 → 1 fades it out. */
+export function flash(ctx: Ctx, k: number, color = PAPER) {
+  const a = 1 - clamp(k);
+  if (a <= 0) return;
   ctx.save();
-  ctx.beginPath();
-  ctx.rect(W / 2 + w / 2 - w * e - 8, y - s, w * e + 16, s * 2);
-  ctx.clip();
+  ctx.globalAlpha = a;
   ctx.fillStyle = color;
-  ctx.fillText(text, W / 2, y);
+  ctx.fillRect(0, 0, W, H);
   ctx.restore();
 }
 
-/** A hard rule struck through a word. */
-export function strike(ctx: Ctx, text: string, y: number, k: number, size: number) {
-  setFont(ctx, size);
-  const w = ctx.measureText(text).width * 0.58;
+/** Shakes everything drawn after it. */
+export function shake(ctx: Ctx, amount: number, seed: number) {
+  if (amount <= 0) return;
+  ctx.translate(rnd2(seed) * amount, rnd2(seed + 9.1) * amount);
+}
+
+/** Slices the frame horizontally and shoves the slices sideways: the glitch on a cut. */
+export function glitch(ctx: Ctx, src: HTMLCanvasElement, k: number, seed: number) {
+  const a = 1 - clamp(k);
+  if (a <= 0) return;
+  const rows = 14;
+  for (let i = 0; i < rows; i++) {
+    const y = (H / rows) * i;
+    const off = rnd2(seed + i * 3.3) * 160 * a;
+    ctx.drawImage(src, 0, y, W, H / rows, off, y, W, H / rows);
+  }
+}
+
+/** A tall X struck over the frame, drawn on in `k`. */
+export function slashX(ctx: Ctx, cx: number, cy: number, r: number, k: number, color = PAPER, lw = 22) {
+  const a = clamp(k * 2);
+  const b = clamp(k * 2 - 1);
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lw;
+  ctx.lineCap = 'square';
+  if (a > 0) {
+    ctx.beginPath();
+    ctx.moveTo(cx - r, cy - r);
+    ctx.lineTo(cx - r + 2 * r * easeOut(a), cy - r + 2 * r * easeOut(a));
+    ctx.stroke();
+  }
+  if (b > 0) {
+    ctx.beginPath();
+    ctx.moveTo(cx + r, cy - r);
+    ctx.lineTo(cx + r - 2 * r * easeOut(b), cy - r + 2 * r * easeOut(b));
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/** A rule drawn through a word. */
+export function strike(ctx: Ctx, halfWidth: number, y: number, k: number, color = PAPER) {
   const e = easeOut(clamp(k));
   ctx.save();
-  ctx.strokeStyle = PAPER;
-  ctx.lineWidth = 12;
-  ctx.lineCap = 'butt';
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 14;
   ctx.beginPath();
-  ctx.moveTo(W / 2 + w, y + 6);
-  ctx.lineTo(W / 2 + w - 2 * w * e, y + 6);
+  ctx.moveTo(W / 2 + halfWidth, y);
+  ctx.lineTo(W / 2 + halfWidth - 2 * halfWidth * e, y);
   ctx.stroke();
   ctx.restore();
 }
 
-/** A small outlined tag, the way the reference films label each idea. */
+/** A small outlined label that snaps in. */
 export function tag(ctx: Ctx, text: string, x: number, y: number, k: number, size = 40, invert = false) {
-  const e = easeOut(clamp(k));
+  const e = easeOut(clamp(k / (3 * F)));
   if (e <= 0) return;
   setFont(ctx, size);
   const w = ctx.measureText(text).width + size * 1.1;
   const h = size * 1.9;
   ctx.save();
-  ctx.globalAlpha = clamp(k * 4);
-  ctx.translate(x, y);
-  ctx.scale(1, lerp(0.2, 1, e));
+  ctx.translate(x + (1 - e) * 90, y);
+  ctx.scale(1, e);
   ctx.fillStyle = invert ? PAPER : INK;
-  ctx.strokeStyle = PAPER;
+  ctx.strokeStyle = invert ? INK : PAPER;
   ctx.lineWidth = 4;
   ctx.beginPath();
   ctx.rect(-w / 2, -h / 2, w, h);
@@ -164,10 +287,11 @@ export function tag(ctx: Ctx, text: string, x: number, y: number, k: number, siz
 }
 
 /** Corner brackets: a viewfinder around the picture. */
-export function brackets(ctx: Ctx, x: number, y: number, w: number, h: number, k: number, len = 70, lw = 7) {
+export function brackets(ctx: Ctx, x: number, y: number, w: number, h: number, k: number, len = 70, lw = 7, color = PAPER) {
   const e = easeOut(clamp(k));
+  if (e <= 0) return;
   ctx.save();
-  ctx.strokeStyle = PAPER;
+  ctx.strokeStyle = color;
   ctx.lineWidth = lw;
   ctx.lineCap = 'square';
   const L = len * e;
@@ -186,118 +310,168 @@ export function brackets(ctx: Ctx, x: number, y: number, w: number, h: number, k
   ctx.restore();
 }
 
-/** A full-frame flash; `k` 0 → 1 fades it away. */
-export function flash(ctx: Ctx, k: number, color = PAPER) {
-  const a = 1 - clamp(k);
-  if (a <= 0) return;
-  ctx.save();
-  ctx.globalAlpha = a;
-  ctx.fillStyle = color;
-  ctx.fillRect(0, 0, W, H);
-  ctx.restore();
-}
-
-/** Shakes everything drawn after it; seeded so the render repeats exactly. */
-export function shake(ctx: Ctx, amount: number, seed: number) {
-  if (amount <= 0) return;
-  const r = (n: number) => {
-    const x = Math.sin(seed * 12.9898 + n * 78.233) * 43758.5453;
-    return (x - Math.floor(x)) * 2 - 1;
-  };
-  ctx.translate(r(1) * amount, r(2) * amount);
-}
-
-/** Arabic-Indic digits, the way a Gulf audience reads numbers. */
 export const arabicNum = (n: number) => String(Math.round(n)).replace(/\d/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)]);
 
-/** A horizontal progress bar with its percentage. */
 export function progress(ctx: Ctx, y: number, k: number, label: string) {
-  const w = W * 0.7;
+  const w = W * 0.72;
   const x = (W - w) / 2;
   ctx.save();
   ctx.strokeStyle = PAPER;
-  ctx.lineWidth = 4;
-  ctx.strokeRect(x, y, w, 46);
+  ctx.lineWidth = 5;
+  ctx.strokeRect(x, y, w, 54);
   ctx.fillStyle = PAPER;
-  ctx.fillRect(x + 6, y + 6, (w - 12) * clamp(k), 34);
-  setFont(ctx, 40);
-  ctx.fillText(`${label} ${arabicNum(clamp(k) * 100)}٪`, W / 2, y - 52);
+  ctx.fillRect(x + 7, y + 7, (w - 14) * clamp(k), 40);
+  setFont(ctx, 44);
+  ctx.fillText(`${label} ${arabicNum(clamp(k) * 100)}٪`, W / 2, y - 58);
   ctx.restore();
 }
 
-/** The Kamirty mark: a camera body whose lens holds an AI chip. Geometric, one colour. */
-export function logo(ctx: Ctx, cx: number, cy: number, s: number, k: number, color = PAPER) {
+/**
+ * The Kamirty mark: a camera whose lens holds an AI chip — the chip drawn in full, with its
+ * pins on all four sides and the traces inside, and the wordmark under it.
+ */
+export function logo(ctx: Ctx, cx: number, cy: number, s: number, k: number, color = PAPER, wordmark = true) {
   const e = easeOut(clamp(k));
+  if (e <= 0) return;
   ctx.save();
   ctx.translate(cx, cy);
-  ctx.scale(s * e, s * e);
+  ctx.scale(s * lerp(1.4, 1, e), s * lerp(1.4, 1, e));
+  ctx.globalAlpha = clamp(k * 3);
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
-  ctx.lineWidth = 7;
+  ctx.lineWidth = 9;
   ctx.lineJoin = 'round';
-  // body
+  ctx.lineCap = 'round';
+
+  // viewfinder bump, then the body
   ctx.beginPath();
-  ctx.moveTo(-150, -60);
-  ctx.lineTo(-96, -60);
-  ctx.lineTo(-74, -96);
-  ctx.lineTo(74, -96);
-  ctx.lineTo(96, -60);
-  ctx.lineTo(150, -60);
-  ctx.lineTo(150, 96);
-  ctx.lineTo(-150, 96);
-  ctx.closePath();
+  ctx.roundRect(-112, -132, 86, 36, 8);
   ctx.stroke();
-  // lens
   ctx.beginPath();
-  ctx.arc(0, 14, 66, 0, Math.PI * 2);
+  ctx.roundRect(-160, -100, 320, 226, 22);
   ctx.stroke();
-  // the chip inside the lens
+  // shutter button and the lamp
   ctx.beginPath();
-  ctx.rect(-28, -14, 56, 56);
+  ctx.roundRect(96, -122, 42, 26, 7);
   ctx.stroke();
-  for (let i = -1; i <= 1; i++) {
-    for (const [a, b, c, d] of [
-      [i * 18, -14, i * 18, -32],
-      [i * 18, 42, i * 18, 60],
-      [-28, 14 + i * 18, -46, 14 + i * 18],
-      [28, 14 + i * 18, 46, 14 + i * 18],
+  ctx.beginPath();
+  ctx.arc(-124, -58, 9, 0, Math.PI * 2);
+  ctx.fill();
+
+  // the lens
+  ctx.beginPath();
+  ctx.arc(0, 16, 84, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // the chip inside it: body, pins on four sides, traces
+  const half = 42;
+  ctx.lineWidth = 7;
+  ctx.beginPath();
+  ctx.roundRect(-half, 16 - half, half * 2, half * 2, 6);
+  ctx.stroke();
+  for (let i = -2; i <= 2; i++) {
+    const p = i * 17;
+    for (const [x1, y1, x2, y2] of [
+      [p, 16 - half, p, 16 - half - 24],
+      [p, 16 + half, p, 16 + half + 24],
+      [-half, 16 + p, -half - 24, 16 + p],
+      [half, 16 + p, half + 24, 16 + p],
     ] as const) {
       ctx.beginPath();
-      ctx.moveTo(a, b);
-      ctx.lineTo(c, d);
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
       ctx.stroke();
     }
+  }
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.roundRect(-20, -4, 40, 40, 4);
+  ctx.stroke();
+  for (const [x1, y1, x2, y2] of [
+    [-20, 6, -40, 6],
+    [20, 26, 40, 26],
+    [0, -4, 0, -24],
+    [0, 36, 0, 54],
+  ] as const) {
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+  }
+
+  if (wordmark) {
+    ctx.fillStyle = color;
+    setFont(ctx, 62, 'Cairo');
+    ctx.direction = 'ltr';
+    ctx.textAlign = 'center';
+    ctx.fillText('Kamirty.AI', 0, 196);
   }
   ctx.restore();
 }
 
-/** Draws an offscreen canvas into a rectangle, cropped to fill, with optional rounded corners. */
-export function cover(ctx: Ctx, src: HTMLCanvasElement, x: number, y: number, w: number, h: number, radius = 0) {
+/** Draws a canvas into a rectangle, cropped to fill, with an optional push-in. */
+export function cover(ctx: Ctx, src: HTMLCanvasElement, x: number, y: number, w: number, h: number, zoom = 1, radius = 0) {
   const sr = src.width / src.height;
   const dr = w / h;
   let sw = src.width;
   let sh = src.height;
   if (sr > dr) sw = src.height * dr;
   else sh = src.width / dr;
+  sw /= zoom;
+  sh /= zoom;
   ctx.save();
-  if (radius > 0) {
-    ctx.beginPath();
-    ctx.roundRect(x, y, w, h, radius);
-    ctx.clip();
-  } else {
-    ctx.beginPath();
-    ctx.rect(x, y, w, h);
-    ctx.clip();
-  }
+  ctx.beginPath();
+  if (radius > 0) ctx.roundRect(x, y, w, h, radius);
+  else ctx.rect(x, y, w, h);
+  ctx.clip();
   ctx.drawImage(src, (src.width - sw) / 2, (src.height - sh) / 2, sw, sh, x, y, w, h);
   ctx.restore();
 }
 
-/** Thin scanlines over the picture: the only texture in the film. */
-export function scanlines(ctx: Ctx, x: number, y: number, w: number, h: number, alpha = 0.1) {
+/** Moving grain and scanlines, so no part of the frame is ever truly still. */
+export function texture(ctx: Ctx, t: number, alpha = 0.055) {
   ctx.save();
   ctx.globalAlpha = alpha;
+  ctx.fillStyle = PAPER;
+  const n = 90;
+  for (let i = 0; i < n; i++) {
+    const s = i + Math.floor(t * 12) * 97;
+    ctx.fillRect(rnd(s) * W, rnd(s + 0.7) * H, 3, 3);
+  }
+  ctx.globalAlpha = alpha * 0.6;
   ctx.fillStyle = INK;
-  for (let i = 0; i < h; i += 6) ctx.fillRect(x, y + i, w, 2);
+  const off = (t * 40) % 8;
+  for (let y = -8; y < H; y += 8) ctx.fillRect(0, y + off, W, 2);
+  ctx.restore();
+}
+
+export function vignette(ctx: Ctx, strength = 0.55) {
+  const g = ctx.createRadialGradient(W / 2, H / 2, H * 0.28, W / 2, H / 2, H * 0.72);
+  g.addColorStop(0, 'rgba(0,0,0,0)');
+  g.addColorStop(1, `rgba(0,0,0,${strength})`);
+  ctx.save();
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+}
+
+/** The sticky caption at the top and the handle at the foot, present in every frame. */
+export function chrome(ctx: Ctx, t: number, invert = false) {
+  const fg = invert ? INK : PAPER;
+  const bgc = invert ? PAPER : INK;
+  ctx.save();
+  setFont(ctx, 40);
+  const top = 'استوديو الأنمي العربي · مجانًا';
+  const w = ctx.measureText(top).width + 54;
+  ctx.fillStyle = bgc;
+  ctx.globalAlpha = 0.65;
+  ctx.fillRect(W / 2 - w / 2, 58, w, 72);
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = fg;
+  ctx.fillText(top, W / 2, 96);
+  ctx.globalAlpha = 0.55 + 0.25 * Math.sin(t * 2.4);
+  setFont(ctx, 34);
+  ctx.direction = 'ltr';
+  ctx.fillText('anime.kamirtyai.com', W / 2, H - 70);
   ctx.restore();
 }
